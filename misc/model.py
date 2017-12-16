@@ -57,14 +57,21 @@ class AttModel(CaptionModel):
             self.get_self_critical_reward = get_self_critical_reward()
             self.critRL = utils.RewardCriterion()
 
-    def forward(self, img, seq, opt):
+    def forward(self, img, seq, gt_seq, ncap, opt):
         if opt == 'MLE':
             return self._forward(img, seq)
         elif opt == 'RL':
             gen_result = self._sample(img, {'sample_max':0})
             greedy_result = self._sample(Variable(img.data, volatile=True), {'sample_max':0})
 
-            pdb.set_trace()
+            reward, cider_score = self.get_self_critical_reward(gen_result[0], greedy_result[0], gt_seq, ncap)
+            reward = Variable(torch.from_numpy(reward).type_as(img.data).float())
+            cider_score = Variable(torch.Tensor(1).fill_(cider_score).type_as(img.data))
+
+            loss = self.critRL(gen_result[1], gen_result[0], reward)
+
+            return loss, cider_score
+
         elif opt == 'sample':
             eval_opt = {'sample_max':1, 'beam_size': 1}
             return self._sample(img, eval_opt)
@@ -189,7 +196,7 @@ class AttModel(CaptionModel):
                 seqLogprobs.append(sampleLogprobs.view(-1))
 
             output, state = self.core(xt, fc_feats, conv_feats, p_conv_feats, state)
-            logprobs = F.log_softmax(self.logit(output))
+            logprobs = F.log_softmax(self.logit(output), dim=1)
 
         return torch.cat([_.unsqueeze(1) for _ in seq], 1), torch.cat([_.unsqueeze(1) for _ in seqLogprobs], 1)
 

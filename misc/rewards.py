@@ -17,13 +17,12 @@ import pdb
 
 #CiderD_scorer = CiderD(df='corpus')
 
-def array_to_str(arr, vocab_size):
+def array_to_str(arr):
     out = ''
     for i in range(len(arr)):
-        if arr[i] == 0:
-            out += str(vocab_size)
-            break
         out += str(arr[i]) + ' '
+        if arr[i] == 0:
+            break
     return out.strip()
 
 
@@ -38,26 +37,28 @@ class get_self_critical_reward(nn.Module):
         seq_per_img = batch_size // gt_gts.size(0)
         
         res = OrderedDict()
-        gen_seq = gen_input.cpu().numpy()
-        greedy_seq = greedy_input.cpu().numpy()
+        gen_result = gen_input.cpu().numpy()
+        greedy_result = greedy_input.cpu().numpy()
 
         for i in range(batch_size):
             res[i] = [array_to_str(gen_result[i])]
         for i in range(batch_size):
-            res[batch_size + i] = [array_to_str(greedy_res[i])]
+            res[batch_size + i] = [array_to_str(greedy_result[i])]
 
         gts = OrderedDict()
         for i in range(batch_size):
             gts_np = gt_gts[i][:ncap.data[i]].data.cpu().numpy()
-            gts[i] = [array_to_str(gts_np[j], self.learn_wsize) for j in range(len(gts_np))]
+            gts[i] = [array_to_str(gts_np[j]) for j in range(len(gts_np))]
 
+        #_, scores = Bleu(4).compute_score(gts, res)
+        #scores = np.array(scores[3])
         res = [{'image_id':i, 'caption': res[i]} for i in range(2 * batch_size)]
         gts = {i: gts[i % batch_size // seq_per_img] for i in range(2 * batch_size)}
-
         _, scores = self.CiderD_scorer.compute_score(gts, res)
-        #pdb.set_trace()
-        # print(_)
+        # print('Cider scores:', _)
+
         scores = scores[:batch_size] - scores[batch_size:]
-        rewards = np.repeat(scores[:, np.newaxis], gen_seq.shape[1], 1)
-        
+
+        rewards = np.repeat(scores[:, np.newaxis], gen_result.shape[1], 1)
+
         return rewards, _

@@ -73,10 +73,25 @@ def set_lr(optimizer, decay_factor):
     for group in optimizer.param_groups:
         group['lr'] = group['lr'] * decay_factor
 
+# def clip_gradient(optimizer, grad_clip):
+#     totalnorm = 0
+#     for p in model.parameters():
+#         if p.requires_grad:
+#             if p.grad is not None:            
+#                 modulenorm = p.grad.data.norm()
+#                 totalnorm += modulenorm ** 2
+#     totalnorm = np.sqrt(totalnorm)
+
+#     norm = clip_norm / max(totalnorm, clip_norm)
+#     for p in model.parameters():
+#         if p.requires_grad:
+#             if p.grad is not None:            
+#                 p.grad.mul_(norm)
+
 def clip_gradient(optimizer, grad_clip):
     for group in optimizer.param_groups:
         for param in group['params']:
-            if param.requires_grad:
+            if param.grad is not None:
                 param.grad.data.clamp_(-grad_clip, grad_clip)
 
 def language_eval(dataset, preds, model_id, split):

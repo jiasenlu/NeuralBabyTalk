@@ -78,6 +78,7 @@ def train(epoch, opt):
     #########################################################################################
     data_iter = iter(dataloader)
     loss_temp = 0
+    cider_temp = 0
     start = time.time()
 
     for step in range(len(dataloader)):
@@ -85,14 +86,17 @@ def train(epoch, opt):
         img, iseq, gts_seq, ncap, img_id = data
 
         iseq = iseq.view(-1, iseq.size(2))
+
         input_imgs.data.resize_(img.size()).copy_(img)
         input_seqs.data.resize_(iseq.size()).copy_(iseq)
+        gt_seqs.data.resize_(gts_seq.size()).copy_(gts_seq)
+        num_cap.data.resize_(ncap.size()).copy_(ncap)
 
         if opt.self_critical:
-            loss = model(input_imgs, input_seqs, 'RL')            
+            loss, cider_score = model(input_imgs, input_seqs, gt_seqs, num_cap, 'RL')         
+            cider_temp += cider_score.data[0]
         else:
-            loss = model(input_imgs, input_seqs, 'MLE')
-            reward_ave = 0
+            loss = model(input_imgs, input_seqs, gt_seqs, num_cap, 'MLE')
 
         model.zero_grad()
         loss.backward()
@@ -104,9 +108,13 @@ def train(epoch, opt):
         if step % opt.disp_interval == 0 and step != 0:
             end = time.time()
             loss_temp /= opt.disp_interval
-            print("step {}/{} (epoch {}), loss = {:.3f}, avg_reward = {:.3f}, time/batch = {:.3f}" \
-                .format(step, len(dataloader), epoch, loss_temp, reward_ave, end - start))
-            start = time.time()  
+            cider_temp /= opt.disp_interval
+            print("step {}/{} (epoch {}), loss = {:.3f}, cider_score = {:.3f}, time/batch = {:.3f}" \
+                .format(step, len(dataloader), epoch, loss_temp, cider_temp, end - start))
+            start = time.time()
+
+            loss_temp = 0
+            cider_temp = 0
 
 def eval(opt):
     model.eval()
@@ -155,13 +163,19 @@ def eval(opt):
 # initialize the data holder.
 input_imgs = torch.FloatTensor(1)
 input_seqs = torch.LongTensor(1)
+gt_seqs = torch.LongTensor(1)
+num_cap = torch.LongTensor(1)
 
 if opt.cuda:
     input_imgs = input_imgs.cuda()
     input_seqs = input_seqs.cuda()
+    gt_seqs = gt_seqs.cuda()
+    num_cap = num_cap.cuda()
 
 input_imgs = Variable(input_imgs)
 input_seqs = Variable(input_seqs)
+gt_seqs = Variable(gt_seqs)
+num_cap = Variable(num_cap)
 
 params = []
 for key, value in dict(model.named_parameters()).items():
@@ -180,19 +194,17 @@ start_epoch = 0
 
 for epoch in range(start_epoch, opt.max_epochs):
     
-    # # Assign the learning rate
-    # if epoch > opt.learning_rate_decay_start and opt.learning_rate_decay_start >= 0:
-    #     frac = (epoch - opt.learning_rate_decay_start) // opt.learning_rate_decay_every
-    #     decay_factor = opt.learning_rate_decay_rate  ** frac
-    #     utils.set_lr(optimizer, decay_factor) # set the decayed rate
-    #     opt.current_lr = opt.
-    # else:
-    #     opt.current_lr = opt.learning_rate
-    # # Assign the scheduled sampling prob
-    # if epoch > opt.scheduled_sampling_start and opt.scheduled_sampling_start >= 0:
-    #     frac = (epoch - opt.scheduled_sampling_start) // opt.scheduled_sampling_increase_every
-    #     opt.ss_prob = min(opt.scheduled_sampling_increase_prob  * frac, opt.scheduled_sampling_max_prob)
-    #     model.ss_prob = opt.ss_prob
+    if epoch > opt.learning_rate_decay_start and opt.learning_rate_decay_start >= 0:
+        if (epoch - opt.learning_rate_decay_start) % opt.learning_rate_decay_every == 0:
+            # decay the learning rate.
+            opt.learning_rate  = utils.decay_lr(optimizer, opt.learning_rate_decay_rate)
 
-    # train(epoch, opt)
+    if epoch > opt.scheduled_sampling_start and opt.scheduled_sampling_start >= 0:
+        frac = (epoch - opt.scheduled_sampling_start) // opt.scheduled_sampling_increase_every
+        opt.ss_prob = min(opt.scheduled_sampling_increase_prob  * frac, opt.scheduled_sampling_max_prob)
+        model.ss_prob = opt.ss_prob
+
+    train(epoch, opt)
     eval(opt)
+
+    
