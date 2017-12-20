@@ -28,7 +28,7 @@ class AttModel(CaptionModel):
         self.att_feat_size = opt.att_feat_size
         self.att_hid_size = opt.att_hid_size    
         self.seq_per_img = 5
-        self.grid_num = 7 * 7
+        self.att_size = opt.att_size
         self.beta = 3
         
         self.ss_prob = 0.0 # Schedule sampling probability
@@ -97,9 +97,9 @@ class AttModel(CaptionModel):
         fc_feats = fc_feats.view(batch_size, 1, self.fc_feat_size)\
                 .expand(batch_size, self.seq_per_img, self.fc_feat_size)\
                 .contiguous().view(-1, self.fc_feat_size)
-        conv_feats = conv_feats.view(batch_size, 1, self.grid_num, self.att_feat_size)\
-                .expand(batch_size, self.seq_per_img, self.grid_num, self.att_feat_size)\
-                .contiguous().view(-1, self.grid_num, self.att_feat_size)   
+        conv_feats = conv_feats.view(batch_size, 1, self.att_size*self.att_size, self.att_feat_size)\
+                .expand(batch_size, self.seq_per_img, self.att_size*self.att_size, self.att_feat_size)\
+                .contiguous().view(-1, self.att_size*self.att_size, self.att_feat_size)   
 
         # embed fc and att feats
         fc_feats = self.fc_embed(fc_feats)

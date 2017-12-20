@@ -9,10 +9,11 @@ import torchvision.models as models
 import math
 
 class resnet(nn.Module):
-  def __init__(self, _num_layers=101, _fixed_block=1, pretrained=True):
+  def __init__(self, _num_layers=101, _fixed_block=1, _att_size=14, pretrained=True):
     super(resnet, self).__init__()
     self._num_layers = _num_layers
     self._fixed_block = _fixed_block
+    self._att_size = _att_size
     if self._num_layers == 50:
       self.resnet = models.resnet50(pretrained=pretrained)
 
@@ -50,6 +51,7 @@ class resnet(nn.Module):
   def forward(self, img):
     conv_feat = self.cnn_net(img)
     fc_feat = conv_feat.mean(3).mean(2)
+    conv_feat = F.adaptive_avg_pool2d(conv_feat,[self._att_size, self._att_size])
 
     return conv_feat, fc_feat
   def train(self, mode=True):
