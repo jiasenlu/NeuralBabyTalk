@@ -20,6 +20,8 @@ def parse_opt():
                     action='store_true')
     parser.add_argument('--path_opt', dest='path_opt',
                     default='cfgs/res101.yml', type=str)
+    parser.add_argument('--cached_tokens', type=str, default='dataset/coco-train-idxs',
+                    help='Cached token file for calculating cider score during self critical training.')
 
     # Model settings
     parser.add_argument('--rnn_size', type=int, default=512,
@@ -40,11 +42,13 @@ def parse_opt():
                     help='image random crop size')
     parser.add_argument('--image_crop_size', type=int, default=224,
                     help='image random crop size')
+    parser.add_argument('--att_size', type=int, default=14,
+                    help='conv feat size after spatial adaptive pooling.')    
 
     # Optimization: General
-    parser.add_argument('--max_epochs', type=int, default=36,
+    parser.add_argument('--max_epochs', type=int, default=30,
                     help='number of epochs')
-    parser.add_argument('--batch_size', type=int, default=20,
+    parser.add_argument('--batch_size', type=int, default=50,
                     help='minibatch size')
     parser.add_argument('--grad_clip', type=float, default=0.1, #5.,
                     help='clip gradients at this value')
@@ -91,7 +95,7 @@ def parse_opt():
     # Optimization: for the CNN
     parser.add_argument('--finetune_cnn', action='store_true',
                     help='finetune CNN')  
-    parser.add_argument('--fixed_block', type=float, default=4,
+    parser.add_argument('--fixed_block', type=float, default=1,
                     help='fixed cnn block when training. [0-4] \
                             0:finetune all block, 4: fix all block')
     parser.add_argument('--cnn_optim', type=str, default='adam',
@@ -106,24 +110,16 @@ def parse_opt():
                     help='weight_decay')
 
     # set training session
-    parser.add_argument('--s', type=str, default='adam',
-                    help='what update to use? rmsprop|sgd|sgdmom|adagrad|adam')
-    parser.add_argument('--train_only', action='store_true',
-                    help='if true then use 80k, else use 110k')
+    parser.add_argument('--start_from', type=str, default=None,
+                    help="""continue training from saved model at this path. Path must contain files saved by previous training process: 
+                        'infos.pkl'         : configuration;
+                        'checkpoint'        : paths to model file(s) (created by tf).
+                                              Note: this file contains absolute paths, be careful when moving files around;
+                        'model.ckpt-*'      : file(s) with model definition (created by tf)
+                    """)
+    parser.add_argument('--id', type=str, default='',
+                    help='an id identifying this run/job. used in cross-val and appended when writing progress files')
 
-    # resume trained model
-    parser.add_argument('--r', dest='resume',
-                          help='resume checkpoint or not',
-                          default=False, type=bool)
-    parser.add_argument('--checksession', dest='checksession',
-                          help='checksession to load model',
-                          default=1, type=int)
-    parser.add_argument('--checkepoch', dest='checkepoch',
-                          help='checkepoch to load model',
-                          default=1, type=int)
-    parser.add_argument('--checkpoint', dest='checkpoint',
-                          help='checkpoint to load model',
-                          default=0, type=int)
 
     # Evaluation/Checkpointing
     parser.add_argument('--val_images_use', type=int, default=3200,
@@ -136,7 +132,8 @@ def parse_opt():
                     help='Do we load previous best score when resuming training.')       
     parser.add_argument('--disp_interval', type=int, default=100,
                     help='how many iteration to display an loss.')       
-
+    parser.add_argument('--losses_log_every', type=int, default=10,
+                    help='how many iteration for log.')   
     args = parser.parse_args()
 
     return args
