@@ -1,14 +1,15 @@
-# neuralBabyTalk
+# Neural Baby Talk 
 
-Command
 
-Standard Image Captioning
+## Training the model
+### Standard Image Captioning
+- COCO: 
 
-- COCO-NBT
 
-- VG-NBT
+- Flickr30K
+  VG-NBT
 
-- Flicr-NBT
+  Flicr-NBT
 
 
 Robust Image Captioning
