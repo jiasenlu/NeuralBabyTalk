@@ -1,0 +1,22 @@
+# dataset setting
+dataset: flickr30k
+input_json: '/srv/share/jiasenlu/nbtv2/data/flickr30k/cap_flickr30k.json'
+input_dic: '/srv/share/jiasenlu/nbtv2/data/flickr30k/dic_flickr30k.json'
+image_path: '/srv/share/datasets/flickr30k/flickr30k_images/'
+proposal_h5: '/srv/share/jiasenlu/nbtv2/data/flickr30k/flickr30k_detection.h5'
+data_path: '/srv/share/jiasenlu/nbtv2/data'
+# language model
+cnn_backend: res101
+att_model: topdown
+rnn_size: 1024
+num_layers: 1
+seq_length: 20
+# image model
+image_size: 576
+image_crop_size: 512
+# decode setting
+decode_noc: False
+cached_tokens: 'flickr30k-train-idxs'
+val_split: 'test'
+val_images_use: -1
+cider_df: 'corpus'

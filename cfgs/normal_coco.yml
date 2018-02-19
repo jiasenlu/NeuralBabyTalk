@@ -1,0 +1,20 @@
+# dataset setting
+dataset: coco
+input_json: 'data/coco/cap_coco.json'
+input_dic: 'data/coco/dic_coco.json'
+image_path: '/home/jiasen/data/coco/images'
+proposal_h5: 'data/coco/coco_detection.h5'
+# language model
+att_model: topdown
+rnn_size: 1024
+num_layers: 1
+seq_length: 20
+# image model
+image_size: 576
+image_crop_size: 512
+# decode setting
+decode_noc: False
+cached_tokens: 'coco-train-idxs'
+val_split: 'test'
+val_images_use: -1
+cider_df: 'corpus'
