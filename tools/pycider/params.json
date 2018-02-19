@@ -1,0 +1,7 @@
+{
+	"pathToData" : "data/",
+	"refName" : "pascal50S.json",
+	"candName" : "pascal_candsB.json",
+	"resultFile" : "results.json",
+	"idf" : "coco-val-df"
+}
