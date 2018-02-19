@@ -18,3 +18,4 @@ cached_tokens: 'coco-train-idxs'
 val_split: 'test'
 val_images_use: -1
 cider_df: 'corpus'
+optim: 'adamax'

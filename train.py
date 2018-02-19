@@ -79,8 +79,8 @@ def train(epoch, opt):
 
         model.zero_grad()
         loss.backward()
-        # nn.utils.clip_grad_norm(model.parameters(), opt.grad_clip)
-        utils.clip_gradient(optimizer, opt.grad_clip)
+        nn.utils.clip_grad_norm(model.parameters(), opt.grad_clip)
+        # utils.clip_gradient(optimizer, opt.grad_clip)
         optimizer.step()
 
         # if opt.finetune_cnn:
@@ -311,17 +311,19 @@ if __name__ == '__main__':
     for key, value in dict(model.named_parameters()).items():
         if value.requires_grad:
             if 'cnn' in key:
-                params += [{'params':[value], 'lr':opt.cnn_learning_rate,
-                        'weight_decay':opt.cnn_weight_decay, 'betas':(opt.cnn_optim_alpha, opt.cnn_optim_beta)}]
+                params += [{'params':[value], 'lr':opt.cnn_learning_rate}]
+                        # 'weight_decay':opt.cnn_weight_decay, 'betas':(opt.cnn_optim_alpha, opt.cnn_optim_beta)}]
             else:
-                params += [{'params':[value], 'lr':opt.learning_rate,
-                    'weight_decay':opt.weight_decay, 'betas':(opt.optim_alpha, opt.optim_beta)}]
+                params += [{'params':[value], 'lr':opt.learning_rate}]
+                    # 'weight_decay':opt.weight_decay, 'betas':(opt.optim_alpha, opt.optim_beta)}]
 
     print("Use %s as optmization method" %(opt.optim))
     if opt.optim == 'sgd':
         optimizer = optim.SGD(params, momentum=0.9)
-    else:
+    elif opt.optim == 'adam':
         optimizer = optim.Adam(params)
+    elif opt.optim == 'adamax':
+    	optimizer = optim.Adamax(params)
 
     # if opt.cnn_optim == 'sgd':
     #     cnn_optimizer = optim.SGD(cnn_params, momentum=0.9)

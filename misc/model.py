@@ -17,6 +17,7 @@ from pooling.roi_crop.modules.roi_crop import _RoICrop
 from misc.utils import _affine_grid_gen
 from torch.autograd import Variable
 import math
+from torch.nn.utils.weight_norm import weight_norm
 
 import numpy as np
 # from misc.adaptiveLSTMCell import adaptiveLSTMCell
@@ -72,20 +73,20 @@ class AttModel(CaptionModel):
                                 nn.ReLU(),
                                 nn.Dropout(self.drop_prob_lm))
 
-        self.fc_embed = nn.Sequential(nn.Linear(self.fc_feat_size, self.rnn_size),
+        self.fc_embed = nn.Sequential(weight_norm(nn.Linear(self.fc_feat_size, self.rnn_size), dim=None),
                                     nn.ReLU(),
                                     nn.Dropout(self.drop_prob_lm))
 
-        self.att_embed = nn.Sequential(nn.Linear(self.att_feat_size, self.rnn_size),
+        self.att_embed = nn.Sequential(weight_norm(nn.Linear(self.att_feat_size, self.rnn_size), dim=None),
                                     nn.ReLU(),
                                     nn.Dropout(self.drop_prob_lm))
 
-        self.pool_embed = nn.Sequential(nn.Linear(self.pool_feat_size, self.rnn_size),
+        self.pool_embed = nn.Sequential(weight_norm(nn.Linear(self.pool_feat_size, self.rnn_size), dim=None),
                                     nn.ReLU(),
                                     nn.Dropout(self.drop_prob_lm))
 
-        self.ctx2att = nn.Linear(self.rnn_size, self.att_hid_size)
-        self.ctx2pool = nn.Linear(self.rnn_size, self.att_hid_size)
+        self.ctx2att = weight_norm(nn.Linear(self.rnn_size, self.att_hid_size), dim=None)
+        self.ctx2pool = weight_norm(n.Linear(self.rnn_size, self.att_hid_size), dim=None)
 
         self.logit = nn.Linear(self.rnn_size, self.vocab_size + 1)
         self.roi_align = RoIAlignAvg(1, 1, 1.0 / self.stride)
