@@ -9,7 +9,6 @@ from torch.autograd import *
 import misc.utils as utils
 from misc.model import AttModel
 from torch.nn.parameter import Parameter
-from torch.nn.utils.weight_norm import weight_norm
 import pdb
 
 class Attention(nn.Module):
@@ -18,8 +17,8 @@ class Attention(nn.Module):
         self.rnn_size = opt.rnn_size
         self.att_hid_size = opt.att_hid_size
 
-        self.h2att = weight_norm(nn.Linear(self.rnn_size, self.att_hid_size),dim=None)
-        self.alpha_net =  weight_norm(nn.Linear(self.att_hid_size, 1), dim=None)
+        self.h2att = nn.Linear(self.rnn_size, self.att_hid_size)
+        self.alpha_net =  nn.Linear(self.att_hid_size, 1)
         self.min_value = -1e8
         # self.batch_norm = nn.BatchNorm1d(self.rnn_size)
 
@@ -52,8 +51,8 @@ class Attention2(nn.Module):
         self.rnn_size = opt.rnn_size
         self.att_hid_size = opt.att_hid_size
 
-        self.h2att = weight_norm(nn.Linear(self.rnn_size, self.att_hid_size), dim=None)
-        self.alpha_net = weight_norm(nn.Linear(self.att_hid_size, 1), dim=None)
+        self.h2att = nn.Linear(self.rnn_size, self.att_hid_size)
+        self.alpha_net = nn.Linear(self.att_hid_size, 1)
         self.min_value = -1e8
         # self.batch_norm = nn.BatchNorm1d(self.rnn_size)
 
@@ -90,10 +89,10 @@ class adaPnt(nn.Module):
         self.conv_size = conv_size
 
         # fake region embed
-        self.f_fc1 = weight_norm(nn.Linear(self.rnn_size, self.rnn_size), dim=None)
-        self.f_fc2 = weight_norm(nn.Linear(self.rnn_size, self.att_hid_size), dim=None)
+        self.f_fc1 = nn.Linear(self.rnn_size, self.rnn_size)
+        self.f_fc2 = nn.Linear(self.rnn_size, self.att_hid_size)
         # h out embed
-        self.h_fc1 = weight_norm(nn.Linear(self.rnn_size, self.att_hid_size), dim=None)
+        self.h_fc1 = nn.Linear(self.rnn_size, self.att_hid_size)
         self.alpha_net = nn.Linear(self.att_hid_size, 1)
         self.inplace = False
         self.beta = beta
@@ -229,12 +228,12 @@ class CascadeCore(nn.Module):
         self.fg_size = opt.fg_size
         self.fg_size = opt.fg_size
 
-        self.bn_fc = nn.Sequential(weight_norm(nn.Linear(opt.rnn_size+opt.rnn_size, opt.rnn_size), dim=None),
+        self.bn_fc = nn.Sequential(nn.Linear(opt.rnn_size+opt.rnn_size, opt.rnn_size),
                                 nn.ReLU(),
                                 nn.Dropout(opt.drop_prob_lm),
                                 nn.Linear(opt.rnn_size, 2))
 
-        self.fg_fc = nn.Sequential(weight_norm(nn.Linear(opt.rnn_size+opt.rnn_size, opt.rnn_size), dim=None),
+        self.fg_fc = nn.Sequential(nn.Linear(opt.rnn_size+opt.rnn_size, opt.rnn_size),
                                 nn.ReLU(),
                                 nn.Dropout(opt.drop_prob_lm),
                                 nn.Linear(opt.rnn_size, 300))

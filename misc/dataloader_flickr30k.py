@@ -77,6 +77,10 @@ class DataLoader(data.Dataset):
         		vector = 2*np.random.rand(300) - 1
         	self.glove_fg[i+1] = vector
 
+
+        if opt.det_oracle == True:
+            print('Training and Inference under oracle Mode...')
+            
         # open the caption json file
         print('DataLoader loading json file: ', opt.input_json)
         self.caption_file = json.load(open(self.opt.input_json))
@@ -99,6 +103,20 @@ class DataLoader(data.Dataset):
         		vector = 2*np.random.rand(300) - 1
         	self.glove_clss[i+1] = vector        	
 
+        self.glove_w = np.zeros((len(self.wtoi)+1, 300))
+        for i, word in enumerate(self.wtoi.keys()):
+            vector = np.zeros((300))
+            count = 0
+            for w in word.split(' '):
+                count += 1
+                if w in self.glove.stoi:
+                    glove_vector = self.glove.vectors[self.glove.stoi[w]]
+                    vector += glove_vector.numpy()
+                else: # use a random vector instead
+                    random_vector = 2*np.random.rand(300) - 1
+                    vector += random_vector
+            self.glove_w[i+1] = vector / count            
+            
         self.detect_size = len(self.itod)
         self.fg_size = len(self.dtoi)
         # get the fine-grained mask.
@@ -264,18 +282,25 @@ class DataLoader(data.Dataset):
         # cv2.imwrite('proposals.jpg', img_show2)
 
         # pdb.set_trace()
-
         # padding the proposals and gt_bboxs
         pad_proposals = np.zeros((self.max_proposal, 6))
         pad_gt_bboxs = np.zeros((self.max_gt_box, 5))
         pad_box_mask = np.ones((self.seq_per_img, self.max_gt_box, self.seq_length+1))
 
-        num_pps = min(proposals.shape[0], self.max_proposal)
-        num_box = min(gt_bboxs.shape[0], self.max_gt_box)
+        if self.opt.det_oracle == False:
+            num_pps = min(proposals.shape[0], self.max_proposal)
+            num_box = min(gt_bboxs.shape[0], self.max_gt_box)
 
-        pad_proposals[:num_pps] = proposals[:num_pps]
-        pad_gt_bboxs[:num_box] = gt_bboxs[:num_box]
-        pad_box_mask[:,:num_box,1:] = mask_batch[:,:num_box,:]
+            pad_proposals[:num_pps] = proposals[:num_pps]
+            pad_gt_bboxs[:num_box] = gt_bboxs[:num_box]
+            pad_box_mask[:,:num_box,1:] = mask_batch[:,:num_box,:]
+        else:
+            num_pps = min(gt_bboxs.shape[0], self.max_proposal)
+            pad_proposals[:num_pps] = np.concatenate((gt_bboxs[:num_pps], np.ones([num_pps,1])),axis=1)
+            num_box = min(gt_bboxs.shape[0], self.max_gt_box)
+            pad_gt_bboxs[:num_box] = gt_bboxs[:num_box]
+            pad_box_mask[:,:num_box,1:] = mask_batch[:,:num_box,:]
+            
 
         input_seq = torch.from_numpy(input_seq).long()
         gt_seq = torch.from_numpy(gt_seq).long()

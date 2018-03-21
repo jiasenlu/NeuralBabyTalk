@@ -29,6 +29,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 noc_object = ['bus', 'bottle', 'couch', 'microwave', 'pizza', 'racket', 'suitcase', 'zebra']
+noc_index = [6, 40, 58, 69, 54, 39, 29, 23]
 
 noc_word_map = {'bus':'car', 'bottle':'cup',
                 'couch':'chair', 'microwave':'oven',
@@ -100,7 +101,7 @@ def decode_sequence_det(itow, itod, ltow, itoc, wtod, seq, bn_seq, fg_seq, vocab
                     word = ltow[det_word]
                 else:
                     word = det_word
-                # word = '[ ' + word + ' ]'
+                word = '[ ' + word + ' ]'
                 det_words.append(word)
                 idx = ix - vocab_size - 1
                 det_idxs.append(idx)
@@ -340,7 +341,7 @@ def language_eval(dataset, preds, model_id, split, opt):
     json.dump(preds_filt, open(cache_path, 'w')) # serialize to temporary json file. Sigh, COCO API...
 
     cocoRes = coco.loadRes(cache_path)
-    cocoEval = COCOEvalCap(coco, cocoRes, opt.cider_df)
+    cocoEval = COCOEvalCap(coco, cocoRes, 'corpus')
     cocoEval.params['image_id'] = cocoRes.getImgIds()
     cocoEval.evaluate()
 
@@ -579,23 +580,40 @@ def _jitter_boxes(gt_boxes, jitter=0.05):
     return jittered_boxes
 
 
-def vis_detections(ax, class_name, dets, thresh=0.8):
+color_pad = ['red', 'green', 'blue', 'cyan', 'brown', 'orange']
+
+def vis_detections(ax, class_name, dets, color_i, rest_flag=0):
     """Visual debugging of detections."""
     bbox = tuple(int(np.round(x)) for x in dets[:4])
     score = dets[-1]
 
-    ax.add_patch(
-        patches.Rectangle(
-            (bbox[0], bbox[1]),
-            bbox[2]-bbox[0],
-            bbox[3]-bbox[1],
-            fill=False,      # remove background
-            lw=3,
-            color='green'
+    if rest_flag == 0:
+        ax.add_patch(
+            patches.Rectangle(
+                (bbox[0], bbox[1]),
+                bbox[2]-bbox[0],
+                bbox[3]-bbox[1],
+                fill=False,      # remove background
+                lw=3,
+                color=color_pad[color_i]
+            )
         )
-    )
-    ax.text(bbox[0], bbox[1] + 15, '%s: %.3f' % (class_name, score),
-            color='red', fontsize=10)
+
+        ax.text(bbox[0]+5, bbox[1] + 13, '%s' % (class_name)
+            , fontsize=9,  fontweight='bold', backgroundcolor=color_pad[color_i])
+    else:
+        ax.add_patch(
+            patches.Rectangle(
+                (bbox[0], bbox[1]),
+                bbox[2]-bbox[0],
+                bbox[3]-bbox[1],
+                fill=False,      # remove background
+                lw=2,
+                color='grey'
+            )
+        )    
+        ax.text(bbox[0]+5, bbox[1] + 13, '%s' % (class_name)
+            , fontsize=9,  fontweight='bold', backgroundcolor='grey')            
     return ax
 
 import operator as op

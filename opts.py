@@ -59,7 +59,7 @@ def parse_opt():
                     help='number of epochs')
     parser.add_argument('--batch_size', type=int, default=10,
                     help='minibatch size')
-    parser.add_argument('--grad_clip', type=float, default=0.25, #5.,
+    parser.add_argument('--grad_clip', type=float, default=0.1, #5.,
                     help='clip gradients at this value')
     parser.add_argument('--drop_prob_lm', type=float, default=0.5,
                     help='strength of dropout in the Language Model RNN')
@@ -72,7 +72,7 @@ def parse_opt():
                     help='used when sample_max = 1, indicates number of beams in beam search. Usually 2 or 3 works well. More is not better. Set this to 1 for faster runtime but a bit worse performance.')
 
     # Schedule Sampling.
-    parser.add_argument('--scheduled_sampling_start', type=int, default=-1, 
+    parser.add_argument('--scheduled_sampling_start', type=int, default=-1,
                     help='at what iteration to start decay gt probability')
     parser.add_argument('--scheduled_sampling_increase_every', type=int, default=5, 
                     help='every how many iterations thereafter to gt probability')
@@ -117,7 +117,6 @@ def parse_opt():
                     help='cnn learning rate')
     parser.add_argument('--cnn_weight_decay', type=float, default=0,
                     help='weight_decay')
-
     # set training session
     parser.add_argument('--start_from', type=str, default=None,
                     help="""continue training from saved model at this path. Path must contain files saved by previous training process: 
@@ -128,7 +127,6 @@ def parse_opt():
                     """)
     parser.add_argument('--id', type=str, default='',
                     help='an id identifying this run/job. used in cross-val and appended when writing progress files')
-
     # Evaluation/Checkpointing
     parser.add_argument('--cider_df', type=str, default='corpus',
                     help='')
@@ -144,7 +142,7 @@ def parse_opt():
                     help='directory to store checkpointed models')
     parser.add_argument('--language_eval', type=int, default=1,
                     help='Evaluate language as well (1 = yes, 0 = no)? BLEU/CIDEr/METEOR/ROUGE_L? requires coco-caption code from Github.')
-    parser.add_argument('--load_best_score', type=int, default=0,
+    parser.add_argument('--load_best_score', type=int, default=1,
                     help='Do we load previous best score when resuming training.')       
     parser.add_argument('--disp_interval', type=int, default=100,
                     help='how many iteration to display an loss.')       
@@ -152,6 +150,12 @@ def parse_opt():
                     help='how many iteration for log.')
     parser.add_argument('--cbs', type=bool, default=False,
                     help='whether use constraint beam search.')
+    parser.add_argument('--cbs_tag_size', type=int, default=3,
+                    help='whether use constraint beam search.')
+    parser.add_argument('--cbs_mode', type=str, default='all',
+                    help='which cbs mode to use in the decoding stage. cbs_mode: all|unique|novel')
+    parser.add_argument('--det_oracle', type=bool, default=False,
+                    help='whether use oracle bounding box.')
     args = parser.parse_args()
 
     return args

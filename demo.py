@@ -27,8 +27,8 @@ import argparse
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from PIL import Image
-
-
+plt.switch_backend('agg')
+import json
 def demo(opt):
     model.eval()
     #########################################################################################
@@ -41,11 +41,21 @@ def demo(opt):
     num_show = 0
     predictions = []
     count = 0
-    for step in range(len(dataloader_val)):
+    for step in range(1000):
         data = data_iter_val.next()
         img, iseq, gts_seq, num, proposals, bboxs, box_mask, img_id = data
 
+        # if img_id[0] != 134688:
+        #     continue
+
+        # # for i in range(proposals.size(1)): print(opt.itoc[proposals[0][i][4]], i)
+
+        # # list1 = [6, 10]
+        # list1 = [0, 1, 10, 2, 3, 4, 5, 6, 7, 8, 9]
+        # proposals = proposals[:,list1]
+        # num[0,1] = len(list1)
         proposals = proposals[:,:max(int(max(num[:,1])),1),:]
+
         input_imgs.data.resize_(img.size()).copy_(img)
         input_seqs.data.resize_(iseq.size()).copy_(iseq)
         gt_seqs.data.resize_(gts_seq.size()).copy_(gts_seq)
@@ -55,34 +65,77 @@ def demo(opt):
         mask_bboxs.data.resize_(box_mask.size()).copy_(box_mask)
         input_imgs.data.resize_(img.size()).copy_(img)
 
-        eval_opt = {'sample_max':1, 'beam_size':3}
+        eval_opt = {'sample_max':1, 'beam_size': opt.beam_size, 'inference_mode' : True, 'tag_size' : opt.cbs_tag_size}
         seq, bn_seq, fg_seq, _, _, _ = model._sample(input_imgs, input_ppls, input_num, eval_opt)
 
         sents, det_idx, det_word = utils.decode_sequence_det(dataset_val.itow, dataset_val.itod, dataset_val.ltow, dataset_val.itoc, dataset_val.wtod, \
                                                             seq, bn_seq, fg_seq, opt.vocab_size, opt)
 
-        im2show = Image.open(os.path.join(opt.image_path, 'val2014/COCO_val2014_%012d.jpg' % img_id[0])).convert('RGB')
+        if opt.dataset == 'flickr30k':
+            im2show = Image.open(os.path.join(opt.image_path, '%d.jpg' % img_id[0])).convert('RGB')
+        else:
+
+            if os.path.isfile(os.path.join(opt.image_path, 'val2014/COCO_val2014_%012d.jpg' % img_id[0])):
+                im2show = Image.open(os.path.join(opt.image_path, 'val2014/COCO_val2014_%012d.jpg' % img_id[0])).convert('RGB')
+            else:
+                im2show = Image.open(os.path.join(opt.image_path, 'train2014/COCO_train2014_%012d.jpg' % img_id[0])).convert('RGB')
+
         w, h = im2show.size
 
-        # for visulization
-        cls_dets = proposals[0][det_idx].numpy()
-        cls_dets[:,0] = cls_dets[:,0] * w / float(opt.image_crop_size)
-        cls_dets[:,2] = cls_dets[:,2] * w / float(opt.image_crop_size)
-        cls_dets[:,1] = cls_dets[:,1] * h / float(opt.image_crop_size)
-        cls_dets[:,3] = cls_dets[:,3] * h / float(opt.image_crop_size)
+        rest_idx = []
+        for i in range(proposals[0].shape[0]):
+            if i not in det_idx:
+                rest_idx.append(i)
+
+
+        if len(det_idx) > 0:
+            # for visulization
+            proposals = proposals[0].numpy()
+            proposals[:,0] = proposals[:,0] * w / float(opt.image_crop_size)
+            proposals[:,2] = proposals[:,2] * w / float(opt.image_crop_size)
+            proposals[:,1] = proposals[:,1] * h / float(opt.image_crop_size)
+            proposals[:,3] = proposals[:,3] * h / float(opt.image_crop_size)            
+
+            cls_dets = proposals[det_idx]
+            rest_dets = proposals[rest_idx]
 
         # fig = plt.figure()
-        fig, ax = plt.subplots(1)
-        fig.subplots_adjust(left=0,right=0,bottom=0,top=0)
+        # fig = plt.figure(frameon=False)
+        # ax = plt.Axes(fig, [0., 0., 1., 1.])
+        fig = plt.figure(frameon=False)
+        # fig.set_size_inches(5,5*h/w)
+        ax = plt.Axes(fig, [0., 0., 1., 1.])
+        ax.set_axis_off()
+        fig.add_axes(ax)
+        a=fig.gca()
+        a.set_frame_on(False)
+        a.set_xticks([]); a.set_yticks([])
+        plt.axis('off')
+        plt.xlim(0,w); plt.ylim(h,0)
+        # fig, ax = plt.subplots(1)
+
+        # show other box in grey.
 
         plt.imshow(im2show)
-        for i in range(len(cls_dets)):
-            ax = utils.vis_detections(ax, dataset_val.itoc[int(cls_dets[i,4])], cls_dets[i,:5], thresh=0)
-        plt.axis('off')
-        plt.axis('tight')
-        plt.tight_layout()
-        fig.savefig('/visu/%d.jpg' %(img_id[0]), bbox_inches='tight', pad_inches=0, dpi=150)
 
+        if len(rest_idx) > 0:
+            for i in range(len(rest_dets)):
+                ax = utils.vis_detections(ax, dataset_val.itoc[int(rest_dets[i,4])], rest_dets[i,:5], i, 1)
+
+        if len(det_idx) > 0:
+            for i in range(len(cls_dets)):
+                ax = utils.vis_detections(ax, dataset_val.itoc[int(cls_dets[i,4])], cls_dets[i,:5], i, 0)
+
+        # plt.axis('off')
+        # plt.axis('tight')
+        # plt.tight_layout()
+        fig.savefig('visu/%d.jpg' %(img_id[0]), bbox_inches='tight', pad_inches=0, dpi=150)
+        print(str(img_id[0]) + ': ' + sents[0])
+
+        entry = {'image_id': img_id[0], 'caption': sents[0]}
+        predictions.append(entry)
+
+    return predictions
 ####################################################################################
 # Main
 ####################################################################################
@@ -96,7 +149,20 @@ if __name__ == '__main__':
     parser.add_argument('--id', type=str, default='',
                     help='an id identifying this run/job. used in cross-val and appended when writing progress files')
     parser.add_argument('--image_path', type=str, default='/home/jiasen/data/coco/images/',
-                    help='path to the h5file containing the image data') 
+                    help='path to the h5file containing the image data')
+    parser.add_argument('--cbs', type=bool, default=False,
+                    help='whether use constraint beam search.')
+    parser.add_argument('--cbs_tag_size', type=int, default=3,
+                    help='whether use constraint beam search.')
+    parser.add_argument('--cbs_mode', type=str, default='all',
+                    help='which cbs mode to use in the decoding stage. cbs_mode: all|unique|novel')
+    parser.add_argument('--det_oracle', type=bool, default=False,
+                    help='whether use oracle bounding box.')
+    parser.add_argument('--cnn_backend', type=str, default='res101',
+                    help='res101 or vgg16')
+    parser.add_argument('--data_path', type=str, default='')
+    parser.add_argument('--beam_size', type=int, default=1)
+
     args = parser.parse_args()
 
     infos = {}
@@ -114,6 +180,13 @@ if __name__ == '__main__':
             infos = cPickle.load(f)
             opt = infos['opt']
             opt.image_path = args.image_path
+            opt.cbs = args.cbs
+            opt.cbs_tag_size = args.cbs_tag_size
+            opt.cbs_mode = args.cbs_mode
+            opt.det_oracle = args.det_oracle
+            opt.cnn_backend = args.cnn_backend
+            opt.data_path = args.data_path
+            opt.beam_size = args.beam_size
     else:
         print("please specify the model path...")
         pdb.set_trace()
@@ -125,12 +198,13 @@ if __name__ == '__main__':
     else:
         from misc.dataloader_coco import DataLoader
 
+
     ####################################################################################
     # Data Loader
     ####################################################################################
-    dataset_val = DataLoader(opt, split=opt.val_split)
+    dataset_val = DataLoader(opt, split='test')
     dataloader_val = torch.utils.data.DataLoader(dataset_val, batch_size=1,
-                                            shuffle=False, num_workers=opt.num_workers)
+                                            shuffle=False, num_workers=0)
 
     input_imgs = torch.FloatTensor(1)
     input_seqs = torch.LongTensor(1)
@@ -174,6 +248,7 @@ if __name__ == '__main__':
     opt.ltow = dataset_val.ltow
     opt.itoc = dataset_val.itoc
 
+    pdb.set_trace()
     if opt.att_model == 'topdown':
         model = AttModel.TopDownModel(opt)
     elif opt.att_model == 'att2in2':
@@ -186,12 +261,15 @@ if __name__ == '__main__':
         # opt.learning_rate = saved_model_opt.learning_rate
         print('Loading the model %s...' %(model_path))
         model.load_state_dict(torch.load(model_path))
-
-        if os.path.isfile(os.path.join(opt.start_from, 'histories_'+opt.id+'.pkl')):
-            with open(os.path.join(opt.start_from, 'histories_'+opt.id+'.pkl')) as f:
+        if os.path.isfile(os.path.join(args.start_from, 'histories_'+opt.id+'.pkl')):
+            with open(os.path.join(args.start_from, 'histories_'+opt.id+'.pkl')) as f:
                 histories = cPickle.load(f)
 
     if opt.cuda:
         model.cuda()
 
-    lang_stats = demo(opt)
+    predictions = demo(opt)
+
+    print('saving...')
+    json.dump(predictions, open('visu.json', 'w'))
+

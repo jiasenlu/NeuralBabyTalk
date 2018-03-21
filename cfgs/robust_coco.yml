@@ -1,10 +1,12 @@
 # dataset setting
 dataset: coco
-input_json: 'data/coco_robust/cap_coco.json'
-input_dic: 'data/coco_robust/dic_coco.json'
+input_json: '/srv/share/jiasenlu/nbtv2/data/coco_robust/cap_coco.json'
+input_dic: '/srv/share/jiasenlu/nbtv2/data/coco_robust/dic_coco.json'
 image_path: '/srv/share/datasets/coco/images'
-proposal_h5: 'data/coco/coco_detection.h5'
+proposal_h5: '/srv/share/jiasenlu/nbtv2/data/coco/coco_detection.h5'
+data_path: '/srv/share/jiasenlu/nbtv2/data'
 # language model
+cnn_backend: res101
 att_model: topdown
 rnn_size: 1024
 num_layers: 1
@@ -18,3 +20,5 @@ cached_tokens: 'coco-all-idxs'
 val_split: 'test'
 val_images_use: -1
 cider_df: 'corpus'
+optim: 'adam'
+checkpoint_path: '/srv/share/jiasenlu/nbtv2/save/robust_coco_1024'

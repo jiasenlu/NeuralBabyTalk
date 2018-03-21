@@ -17,7 +17,6 @@ from pooling.roi_crop.modules.roi_crop import _RoICrop
 from misc.utils import _affine_grid_gen
 from torch.autograd import Variable
 import math
-from torch.nn.utils.weight_norm import weight_norm
 
 import numpy as np
 # from misc.adaptiveLSTMCell import adaptiveLSTMCell
@@ -40,6 +39,7 @@ class AttModel(CaptionModel):
         self.att_hid_size = opt.att_hid_size
         self.finetune_cnn = opt.finetune_cnn
         self.cbs = opt.cbs
+        self.cbs_mode = opt.cbs_mode
         self.seq_per_img = 5
         if opt.cnn_backend == 'vgg16':
             self.stride = 16
@@ -73,20 +73,20 @@ class AttModel(CaptionModel):
                                 nn.ReLU(),
                                 nn.Dropout(self.drop_prob_lm))
 
-        self.fc_embed = nn.Sequential(weight_norm(nn.Linear(self.fc_feat_size, self.rnn_size), dim=None),
+        self.fc_embed = nn.Sequential(nn.Linear(self.fc_feat_size, self.rnn_size),
                                     nn.ReLU(),
                                     nn.Dropout(self.drop_prob_lm))
 
-        self.att_embed = nn.Sequential(weight_norm(nn.Linear(self.att_feat_size, self.rnn_size), dim=None),
+        self.att_embed = nn.Sequential(nn.Linear(self.att_feat_size, self.rnn_size),
                                     nn.ReLU(),
                                     nn.Dropout(self.drop_prob_lm))
 
-        self.pool_embed = nn.Sequential(weight_norm(nn.Linear(self.pool_feat_size, self.rnn_size), dim=None),
+        self.pool_embed = nn.Sequential(nn.Linear(self.pool_feat_size, self.rnn_size),
                                     nn.ReLU(),
                                     nn.Dropout(self.drop_prob_lm))
 
-        self.ctx2att = weight_norm(nn.Linear(self.rnn_size, self.att_hid_size), dim=None)
-        self.ctx2pool = weight_norm(n.Linear(self.rnn_size, self.att_hid_size), dim=None)
+        self.ctx2att = nn.Linear(self.rnn_size, self.att_hid_size)
+        self.ctx2pool = nn.Linear(self.rnn_size, self.att_hid_size)
 
         self.logit = nn.Linear(self.rnn_size, self.vocab_size + 1)
         self.roi_align = RoIAlignAvg(1, 1, 1.0 / self.stride)
@@ -122,7 +122,8 @@ class AttModel(CaptionModel):
             self.embed[0].weight.data[idx_old].copy_(self.embed[0].weight.data[idx_new])
 
 
-    def forward(self, img, seq, gt_seq, num, ppls, gt_boxes, mask_boxes, opt):
+
+    def forward(self, img, seq, gt_seq, num, ppls, gt_boxes, mask_boxes, opt, eval_opt = {}):
         if opt == 'MLE':
             return self._forward(img, seq, ppls, gt_boxes, mask_boxes, num)
         elif opt == 'RL':
@@ -140,10 +141,7 @@ class AttModel(CaptionModel):
             return lm_loss, bn_loss, fg_loss, cider_score
 
         elif opt == 'sample':
-
-            eval_opt = {'sample_max':1, 'beam_size': 1, 'inference_mode' : True}
             seq, bn_seq, fg_seq, seqLogprobs, bnLogprobs, fgLogprobs = self._sample(img, ppls, num, eval_opt)
-
             return Variable(seq), Variable(bn_seq), Variable(fg_seq)
 
     def init_hidden(self, bsz):
@@ -300,6 +298,9 @@ class AttModel(CaptionModel):
         batch_size = img.size(0)
         rois_num = ppls.size(1)
 
+        if beam_size > 1 or self.cbs:
+            return self._sample_beam(img, ppls, num, opt)
+
         if self.finetune_cnn:
             conv_feats, fc_feats = self.cnn(img)
         else:
@@ -337,9 +338,6 @@ class AttModel(CaptionModel):
         # Project the attention feats first to reduce memory and computation comsumptions.
         p_conv_feats = self.ctx2att(conv_feats)
         p_pool_feats = self.ctx2pool(pool_feats)
-
-        if beam_size > 1 or self.cbs:
-            return self._sample_beam(fc_feats, conv_feats, pool_feats, p_conv_feats, p_pool_feats, ppls, num, opt)
 
         vis_offset = (torch.arange(0, batch_size)*rois_num).view(batch_size).type_as(ppls.data).long()
         roi_offset = (torch.arange(0, batch_size)*(rois_num+1)).view(batch_size).type_as(ppls.data).long()
@@ -471,7 +469,7 @@ class AttModel(CaptionModel):
 
         return seq, bn_seq, fg_seq, seqLogprobs, bnLogprobs, fgLogprobs
 
-    def _sample_beam(self, fc_feats, conv_feats, pool_feats, p_conv_feats, p_pool_feats, ppls, num, opt={}):
+    def _sample_beam(self, img, ppls, num, opt={}):
         
         batch_size = ppls.size(0)
         rois_num = ppls.size(1)
@@ -479,13 +477,83 @@ class AttModel(CaptionModel):
         if self.cbs:
             assert batch_size == 1 # cbs only support batch_size == 1 now.
             tag_size = opt.get('tag_size', 3)
-            tag_size = min(num.data[0,1], tag_size)
+            if self.cbs_mode == 'unique': # re-organize the ppls and make non-same at the top.
+                unique_idx = []
+                unique_clss = []
+                for i in range(num.data[0,1]):
+                    det_clss = ppls.data[0,i,4]
+                    det_confidence = ppls.data[0,i,5]
+                    if det_clss not in unique_clss and det_confidence > 0.8:
+                        unique_clss.append(det_clss)
+                        unique_idx.append(i)
+                tag_size = min(len(unique_idx), tag_size)
+                for i in range(num.data[0,1]):
+                    if i not in unique_idx:
+                        unique_idx.append(i)
+                if len(unique_idx) > 0:
+                    ppls[0] = ppls[0][unique_idx]
+            elif self.cbs_mode =='novel': # force decode only novel concept
+                novel_idx = []
+                novel_clss = []
+                for i in range(num.data[0,1]):
+                    det_clss = int(ppls.data[0,i,4])
+                    det_confidence = ppls.data[0,i,5]
+                    if det_clss in utils.noc_index and det_clss not in novel_clss and det_confidence > 0.8:
+                        novel_clss.append(det_clss)
+                        novel_idx.append(i)
+                tag_size = min(len(novel_idx), tag_size)
+                for i in range(num.data[0,1]):
+                    if i not in novel_idx:
+                        novel_idx.append(i)
+                if len(novel_idx) > 0:
+                    ppls[0] = ppls[0][novel_idx]
+            elif self.cbs_mode == 'all':
+                tag_size = min(num.data[0,1], tag_size)
             _, tags = utils.cbs_beam_tag(tag_size)
-            beam_size = len(tags) * 5
+            beam_size = len(tags) * opt.get('beam_size', 3)
+            opt['beam_size'] = beam_size
         else:
             beam_size = opt.get('beam_size', 10)
-        
-        opt['beam_size'] = beam_size
+
+        if self.finetune_cnn:
+            conv_feats, fc_feats = self.cnn(img)
+        else:
+            # with torch.no_grad():
+            conv_feats, fc_feats = self.cnn(Variable(img.data, volatile=True))
+            conv_feats = Variable(conv_feats.data)
+            fc_feats = Variable(fc_feats.data)
+
+        # conv_feats, fc_feats = self.cnn(img)
+        rois = ppls.data.new(batch_size, rois_num, 5)
+        rois[:,:,1:] = ppls.data[:,:,:4]
+
+        for i in range(batch_size): rois[i,:,0] = i
+        pool_feats = self.roi_align(conv_feats, Variable(rois.view(-1,5)))
+        pool_feats = pool_feats.view(batch_size, rois_num, self.att_feat_size)
+
+        loc_input = ppls.data.new(batch_size, rois_num, 5)
+        loc_input[:,:,:4] = ppls.data[:,:,:4] / self.image_crop_size
+        loc_input[:,:,4] = ppls.data[:,:,5]
+        loc_feats = self.loc_fc(Variable(loc_input))
+
+        label_input = ppls.data.new(batch_size, rois_num).long()
+        label_input[:,:] = ppls.data[:,:,4]
+        label_feat = self.det_fc(Variable(label_input))
+
+        # pool_feats = pool_feats + label_feat
+        pool_feats = torch.cat((pool_feats, loc_feats, label_feat), 2)
+        # transpose the conv_feats
+        conv_feats = conv_feats.view(batch_size, self.att_feat_size, -1).transpose(1,2).contiguous()
+        # embed fc and att feats
+        pool_feats = self.pool_embed(pool_feats)
+        fc_feats = self.fc_embed(fc_feats)
+        conv_feats = self.att_embed(conv_feats)
+
+        # Project the attention feats first to reduce memory and computation comsumptions.
+        p_conv_feats = self.ctx2att(conv_feats)
+        p_pool_feats = self.ctx2pool(pool_feats)
+
+
         # constructing the mask.
         pnt_mask = ppls.data.new(batch_size, rois_num+1).byte().fill_(1)
         for i in range(batch_size):
@@ -522,21 +590,30 @@ class AttModel(CaptionModel):
             if self.cbs:
                 self.done_beams[k] = self.constraint_beam_search(state, rnn_output, det_prob, beam_fc_feats, beam_conv_feats, beam_p_conv_feats, \
                                                     beam_pool_feats, beam_p_pool_feats, beam_ppls, beam_pnt_mask, vis_offset, roi_offset, tag_size, tags, opt)
+
+                ii = 0
+                seq[:, k] = self.done_beams[k][tags[-ii-1]][0]['seq'].cuda() # the first beam has highest cumulative score
+                seqLogprobs[:, k] = self.done_beams[k][tags[-ii-1]][0]['logps'].cuda()
+
+                bn_seq[:,k] = self.done_beams[k][tags[-ii-1]][0]['bn_seq'].cuda()
+                bnLogprobs[:,k] = self.done_beams[k][tags[-ii-1]][0]['bn_logps'].cuda()
+
+                fg_seq[:,k] = self.done_beams[k][tags[-ii-1]][0]['fg_seq'].cuda()
+                fgLogprobs[:,k] = self.done_beams[k][tags[-ii-1]][0]['fg_logps'].cuda()
+                    # break
+
             else:
                 self.done_beams[k] = self.beam_search(state, rnn_output, det_prob, beam_fc_feats, beam_conv_feats, beam_p_conv_feats, \
                                                     beam_pool_feats, beam_p_pool_feats, beam_ppls, beam_pnt_mask, vis_offset, roi_offset, opt)
+                
+                seq[:, k] = self.done_beams[k][0]['seq'].cuda() # the first beam has highest cumulative score
+                seqLogprobs[:, k] = self.done_beams[k][0]['logps'].cuda()
 
-            # for ii in range(len(tags)):
-                # if len(self.done_beams[k][tags[-ii-1]]) > 0:
-            ii = 0
-            seq[:, k] = self.done_beams[k][tags[-ii-1]][0]['seq'].cuda() # the first beam has highest cumulative score
-            seqLogprobs[:, k] = self.done_beams[k][tags[-ii-1]][0]['logps'].cuda()
+                bn_seq[:,k] = self.done_beams[k][0]['bn_seq'].cuda()
+                bnLogprobs[:,k] = self.done_beams[k][0]['bn_logps'].cuda()
 
-            bn_seq[:,k] = self.done_beams[k][tags[-ii-1]][0]['bn_seq'].cuda()
-            bnLogprobs[:,k] = self.done_beams[k][tags[-ii-1]][0]['bn_logps'].cuda()
+                fg_seq[:,k] = self.done_beams[k][0]['fg_seq'].cuda()
+                fgLogprobs[:,k] = self.done_beams[k][0]['fg_logps'].cuda()
 
-            fg_seq[:,k] = self.done_beams[k][tags[-ii-1]][0]['fg_seq'].cuda()
-            fgLogprobs[:,k] = self.done_beams[k][tags[-ii-1]][0]['fg_logps'].cuda()
-                    # break
-
+                
         return seq.t(), bn_seq.t(), fg_seq.t(), seqLogprobs.t(), bnLogprobs.t(), fgLogprobs.t()

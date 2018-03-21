@@ -36,11 +36,14 @@ class DataLoader(data.Dataset):
         self.RandomCropWithBbox = utils.RandomCropWithBbox(opt.image_crop_size)
         self.ToTensor = transforms.ToTensor()
         self.res_Normalize = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        self.vgg_pixel_mean = np.array([[[102.9801, 115.9465, 122.7717]]])
+        self.vgg_pixel_mean = np.array([[[103.939, 116.779, 123.68]]])
 
         self.max_gt_box = 100
         self.max_proposal = 200
         self.glove = vocab.GloVe(name='6B', dim=300)
+
+        if opt.det_oracle == True:
+            print('Training and Inference under oracle Mode...')
 
         # load the json file which contains additional information about the dataset
         print('DataLoader loading json file: ', opt.input_dic)
@@ -84,6 +87,20 @@ class DataLoader(data.Dataset):
                     vector += random_vector
             self.glove_fg[i+1] = vector / count
 
+        self.glove_w = np.zeros((len(self.wtoi)+1, 300))
+        for i, word in enumerate(self.wtoi.keys()):
+            vector = np.zeros((300))
+            count = 0
+            for w in word.split(' '):
+                count += 1
+                if w in self.glove.stoi:
+                    glove_vector = self.glove.vectors[self.glove.stoi[w]]
+                    vector += glove_vector.numpy()
+                else: # use a random vector instead
+                    random_vector = 2*np.random.rand(300) - 1
+                    vector += random_vector
+            self.glove_w[i+1] = vector / count            
+            
         # open the caption json file
         print('DataLoader loading json file: ', opt.input_json)
         self.caption_file = json.load(open(self.opt.input_json))
@@ -327,12 +344,19 @@ class DataLoader(data.Dataset):
         pad_gt_bboxs = np.zeros((self.max_gt_box, 5))
         pad_box_mask = np.ones((self.seq_per_img, self.max_gt_box, self.seq_length+1))
 
-        num_pps = min(proposals.shape[0], self.max_proposal)
-        num_box = min(gt_bboxs.shape[0], self.max_gt_box)
+        if self.opt.det_oracle == False:
+            num_pps = min(proposals.shape[0], self.max_proposal)
+            num_box = min(gt_bboxs.shape[0], self.max_gt_box)
 
-        pad_proposals[:num_pps] = proposals[:num_pps]
-        pad_gt_bboxs[:num_box] = gt_bboxs[:num_box]
-        pad_box_mask[:,:num_box,1:] = mask_batch[:,:num_box,:]
+            pad_proposals[:num_pps] = proposals[:num_pps]
+            pad_gt_bboxs[:num_box] = gt_bboxs[:num_box]
+            pad_box_mask[:,:num_box,1:] = mask_batch[:,:num_box,:]
+        else:
+            num_pps = min(gt_bboxs.shape[0], self.max_proposal)
+            pad_proposals[:num_pps] = np.concatenate((gt_bboxs[:num_pps], np.ones([num_pps,1])),axis=1)
+            num_box = min(gt_bboxs.shape[0], self.max_gt_box)
+            pad_gt_bboxs[:num_box] = gt_bboxs[:num_box]
+            pad_box_mask[:,:num_box,1:] = mask_batch[:,:num_box,:]
 
         input_seq = torch.from_numpy(input_seq).long()
         gt_seq = torch.from_numpy(gt_seq).long()

@@ -131,22 +131,72 @@ def main(params):
       lemma_w = out['sentences'][0]['tokens'][0]['lemma']
       wtol[w] = lemma_w
 
-  if split == 'robust':
+  if params['split'] == 'robust':
     split_path = 'data/coco_robust/split_robust_coco.json'
     split_file = json.load(open(split_path, 'r'))
-  pdb.set_trace()
+    split_map = {}
+    split_map['train'] = {}
+    split_map['val'] = {}
+    split_map['test'] = {}
+
+    for img in split_file['train_id']:
+      split_map['train'][str(img['img_id'])] = 1
+    for img in split_file['val_id']:
+      split_map['val'][str(img['img_id'])] = 1
+    for img in split_file['test_id']:
+      split_map['test'][str(img['img_id'])] = 1
+
+  elif params['split'] == 'noc':
+    split_path = 'data/coco_noc/split_noc_coco.json'
+    split_file = json.load(open(split_path, 'r'))
+    split_map = {}
+    split_map['train'] = {}
+    split_map['val'] = {}
+    split_map['test'] = {}
+
+    for img in split_file['train']:
+      split_map['train'][img] = 1
+    for img in split_file['val']:
+      split_map['val'][img] = 1
+    # for img in split_file['val_train']:
+    #   split_map['val'][img] = 1      
+    for img in split_file['test']:
+      split_map['test'][img] = 1
+    # for img in split_file['test_train']:
+    #   split_map['test'][img] = 1
+
   # create output json file
   out = {}
   out['ix_to_word'] = itow # encode the (1-indexed) vocab
   out['wtod'] = wtod
   out['wtol'] = wtol
   out['images'] = []
+  count = 0
   for i,img in enumerate(imgs):
     jimg = {}
-    if img['split'] == 'val' or img['split'] == 'test':
-      jimg['split'] = img['split']
+
+    if params['split'] == 'robust' or params['split'] == 'noc':
+      img_id = str(img['cocoid'])
+      if img_id in split_map['train']:
+        jimg['split'] = 'train'
+      elif img_id in split_map['val']:
+        jimg['split'] = 'val'
+      elif img_id in split_map['test']:
+        jimg['split'] = 'test'
+      else:
+        jimg['split'] = 'rest'
+
+    elif params['split'] == 'challenge':
+      if img['split'] == 'val' and count < 1000: # we use 1000 image from val as validation, and the rest as train.
+        jimg['split'] = img['split']
+        count += 1
+      else:
+        jimg['split'] = 'train' # put restrl into train.
     else:
-      jimg['split'] = 'train' # put restrl into train.
+      if img['split'] == 'val' or img['split'] == 'test':
+        jimg['split'] = img['split']
+      else:
+        jimg['split'] = 'train' # put restrl into train.
 
     if 'filename' in img: jimg['file_path'] = os.path.join(img['filepath'], img['filename']) # copy it over, might need
     if 'cocoid' in img: jimg['id'] = img['cocoid'] # copy over & mantain an id, if present (e.g. coco ids, useful)
@@ -163,10 +213,10 @@ if __name__ == "__main__":
 
   # input json
   parser.add_argument('--input_json', default='data/coco/dataset_coco.json', help='input json file to process into hdf5')
-  parser.add_argument('--split', default='robust', help='input json file to process into hdf5')
+  parser.add_argument('--split', default='noc', help='input json file to process into hdf5')
 
-  parser.add_argument('--outpu_dic_json', default='data/coco/dic_coco.json', help='output json file')
-  parser.add_argument('--output_cap_json', default='data/coco/cap_coco.json', help='output json file')
+  parser.add_argument('--outpu_dic_json', default='data/coco_noc/dic_coco_noc_only.json', help='output json file')
+  parser.add_argument('--output_cap_json', default='data/coco_noc/cap_coco_noc_only.json', help='output json file')
 
   # options
   parser.add_argument('--max_length', default=16, type=int, help='max length of a caption, in number of words. captions longer than this get clipped.')
