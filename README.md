@@ -2,8 +2,12 @@
 
 
 ## Training the model
+
+
+
 ### Standard Image Captioning
-- COCO: 
+#### COCO: 
+##### Data Preparation:
 
 
 - Flickr30K
