@@ -43,7 +43,7 @@ import pdb
 from stanfordcorenlp import StanfordCoreNLP
 from nltk.tokenize import word_tokenize
 
-nlp = StanfordCoreNLP('../stanford-corenlp-full-2017-06-09', memory='8g')
+nlp = StanfordCoreNLP('tools/stanford-corenlp-full-2017-06-09', memory='8g')
 props={'annotators': 'ssplit, tokenize, lemma','pipelineLanguage':'en', 'outputFormat':'json'}
 
 def build_vocab(imgs, params):
@@ -132,7 +132,7 @@ def main(params):
       wtol[w] = lemma_w
 
   if params['split'] == 'robust':
-    split_path = 'data/coco_robust/split_robust_coco.json'
+    split_path = 'data/robust_coco/split_robust_coco.json'
     split_file = json.load(open(split_path, 'r'))
     split_map = {}
     split_map['train'] = {}
@@ -147,7 +147,7 @@ def main(params):
       split_map['test'][str(img['img_id'])] = 1
 
   elif params['split'] == 'noc':
-    split_path = 'data/coco_noc/split_noc_coco.json'
+    split_path = 'data/noc_coco/split_noc_coco.json'
     split_file = json.load(open(split_path, 'r'))
     split_map = {}
     split_map['train'] = {}
@@ -158,12 +158,12 @@ def main(params):
       split_map['train'][img] = 1
     for img in split_file['val']:
       split_map['val'][img] = 1
-    # for img in split_file['val_train']:
-    #   split_map['val'][img] = 1      
+    for img in split_file['val_train']:
+      split_map['val'][img] = 1      
     for img in split_file['test']:
       split_map['test'][img] = 1
-    # for img in split_file['test_train']:
-    #   split_map['test'][img] = 1
+    for img in split_file['test_train']:
+      split_map['test'][img] = 1
 
   # create output json file
   out = {}
@@ -202,8 +202,8 @@ def main(params):
     if 'cocoid' in img: jimg['id'] = img['cocoid'] # copy over & mantain an id, if present (e.g. coco ids, useful)
     out['images'].append(jimg)
   
-  json.dump(out, open(params['outpu_dic_json'], 'w'))
-  print('wrote ', params['outpu_dic_json'])
+  json.dump(out, open(params['output_dic_json'], 'w'))
+  print('wrote ', params['output_dic_json'])
 
   json.dump(imgs_new, open(params['output_cap_json'], 'w'))
   print('wrote ', params['output_cap_json'])
@@ -213,9 +213,9 @@ if __name__ == "__main__":
 
   # input json
   parser.add_argument('--input_json', default='data/coco/dataset_coco.json', help='input json file to process into hdf5')
-  parser.add_argument('--split', default='noc', help='input json file to process into hdf5')
+  parser.add_argument('--split', default='normal', help='different split for different task.')
 
-  parser.add_argument('--outpu_dic_json', default='data/coco_noc/dic_coco_noc_only.json', help='output json file')
+  parser.add_argument('--output_dic_json', default='data/coco_noc/dic_coco_noc_only.json', help='output json file')
   parser.add_argument('--output_cap_json', default='data/coco_noc/cap_coco_noc_only.json', help='output json file')
 
   # options
