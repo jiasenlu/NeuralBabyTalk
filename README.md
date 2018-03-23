@@ -32,27 +32,27 @@ Head to `data/README.md`, and prepare the data for training and evaluation.
 
 First, modify the cofig file `cfgs/normal_coco_res101.yml` with the correct file path.
 
-```python
+```
 python main.py --path_opt cfgs/normal_coco_res101.yml --batch_size 20 --cuda True --num_workers 20 --max_epoch 30
 ```
 ##### Evaluation (COCO)
 Download Pre-trained model from [Link](https://www.dropbox.com/s/6buajkxm9oed1jp/coco_nbt_1024.tar.gz?dl=0). Extract the tar.zip file and put it under `save/`.
 
-```python
+```
 python main.py --path_opt cfgs/normal_coco_res101.yml --batch_size 20 --cuda True --num_workers 20 --max_epoch 30 --inference_only True --beam_size 3 --start_from save/coco_nbt_1024
 ```
 
 ##### Training (Flickr30k)
 Modify the cofig file `cfgs/normal_flickr_res101.yml` with the correct file path.
 
-```python
+```
 python main.py --path_opt cfgs/normal_flickr_res101.yml --batch_size 20 --cuda True --num_workers 20 --max_epoch 30
 ```
 
 ##### Evaluation (Flickr30k)
 Download Pre-trained model from [Link](https://www.dropbox.com/s/6buajkxm9oed1jp/coco_nbt_1024.tar.gz?dl=0). Extract the tar.zip file and put it under `save/`.
 
-```python
+```
 python main.py --path_opt cfgs/normal_coco_res101.yml --batch_size 20 --cuda True --num_workers 20 --max_epoch 30 --inference_only True --beam_size 3 --start_from save/coco_nbt_1024
 ```
 
