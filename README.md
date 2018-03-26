@@ -1,5 +1,7 @@
 # Neural Baby Talk
 
+Implementations for [Neural Baby Talk](https://www.cc.gatech.edu/~jlu347/Jiasen_files/neuralbabytalk.pdf)
+
 ![teaser results](demo/img1.png)
 
 ## requirement
