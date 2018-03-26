@@ -87,7 +87,7 @@ Modify the cofig file `cfgs/normal_flickr_res101.yml` with the correct file path
 ```
 python main.py --path_opt cfgs/robust_coco.yml --batch_size 20 --cuda True --num_workers 20 --max_epoch 30
 ```
-##### Evaluation (Flickr30k)
+##### Evaluation (robust-coco)
 Download Pre-trained model. Extract the tar.zip file and put it under `save/`.
 
 ```
@@ -102,7 +102,7 @@ Modify the cofig file `cfgs/noc_coco_res101.yml` with the correct file path.
 ```
 python main.py --path_opt cfgs/noc_coco_res101.yml --batch_size 20 --cuda True --num_workers 20 --max_epoch 30
 ```
-##### Evaluation (Flickr30k)
+##### Evaluation (noc-coco)
 Download Pre-trained model. Extract the tar.zip file and put it under `save/`.
 
 ```
@@ -130,3 +130,5 @@ journal = {CVPR},
 year = {2018}
 }
 ```
+## Acknowledgement
+We thank Ruotian Luo for his [self-critical.pytorch](https://github.com/ruotianluo/self-critical.pytorch) repo. 
