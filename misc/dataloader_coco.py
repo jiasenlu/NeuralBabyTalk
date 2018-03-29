@@ -1,23 +1,23 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
+import copy
 import json
-import h5py
 import os
-import numpy as np
+import pdb
 import random
-from PIL import Image
-from torchvision.datasets.folder import default_loader
+
+import numpy as np
+from six.moves import xrange
+
+import h5py
+import misc.utils as utils
 import torch
 import torch.utils.data as data
-from pycocotools.coco import COCO
-import copy
-import pdb
-import misc.utils as utils
-from PIL import Image
+import torchtext.vocab as vocab  # use this to load glove vector
 import torchvision.transforms as transforms
-import torchtext.vocab as vocab # use this to load glove vector
+from PIL import Image
+from pycocotools.coco import COCO
+
 
 class DataLoader(data.Dataset):
     def __init__(self, opt, split='train', seq_per_img=5):
@@ -99,8 +99,8 @@ class DataLoader(data.Dataset):
                 else: # use a random vector instead
                     random_vector = 2*np.random.rand(300) - 1
                     vector += random_vector
-            self.glove_w[i+1] = vector / count            
-            
+            self.glove_w[i+1] = vector / count
+
         # open the caption json file
         print('DataLoader loading json file: ', opt.input_json)
         self.caption_file = json.load(open(self.opt.input_json))
@@ -117,7 +117,7 @@ class DataLoader(data.Dataset):
         # load the coco grounding truth bounding box.
         det_train_path = '%s/coco/annotations/instances_train2014.json' %(opt.data_path)
         det_val_path = '%s/coco/annotations/instances_val2014.json' %(opt.data_path)
-        
+
         self.coco_train = COCO(det_train_path)
         self.coco_val = COCO(det_val_path)
 
@@ -133,7 +133,7 @@ class DataLoader(data.Dataset):
             # if we decode novel word, replace the word representation based on the dictionary.
             if opt.decode_noc and word in utils.noc_word_map:
                 word = utils.noc_word_map[word]
-                
+
             for w in word.split(' '):
                 count += 1
                 if w in self.glove.stoi:
@@ -142,14 +142,14 @@ class DataLoader(data.Dataset):
                 else: # use a random vector instead
                     random_vector = 2*np.random.rand(300) - 1
                     vector += random_vector
-            self.glove_clss[i+1] = vector / count        
+            self.glove_clss[i+1] = vector / count
 
         self.detect_size = len(self.ctol)
         self.fg_size = len(self.dtoi)
         # get the fine-grained mask.
         self.fg_mask = np.ones((self.detect_size+1, self.fg_size+1))
         for w, det in self.wtod.items():
-            self.fg_mask[det, self.dtoi[w]] = 0        
+            self.fg_mask[det, self.dtoi[w]] = 0
 
         # separate out indexes for each of the provided splits
         self.split_ix = []
@@ -213,7 +213,7 @@ class DataLoader(data.Dataset):
 
         bbox_ann_ids = coco.getAnnIds(imgIds=image_id)
         bbox_ann = [{'label': self.ctol[i['category_id']], 'bbox': i['bbox']} for i in coco.loadAnns(bbox_ann_ids)]
-        
+
         gt_bboxs = np.zeros((len(bbox_ann), 5))
         for i, bbox in enumerate(bbox_ann):
             gt_bboxs[i, :4] = bbox['bbox']
@@ -236,11 +236,11 @@ class DataLoader(data.Dataset):
             gt_bboxs = utils.resize_bbox(gt_bboxs, width, height, self.opt.image_size, self.opt.image_size)
         else:
             proposals = utils.resize_bbox(proposals, width, height, self.opt.image_crop_size, self.opt.image_crop_size)
-            gt_bboxs = utils.resize_bbox(gt_bboxs, width, height, self.opt.image_crop_size, self.opt.image_crop_size)           
+            gt_bboxs = utils.resize_bbox(gt_bboxs, width, height, self.opt.image_crop_size, self.opt.image_crop_size)
 
-        # crop the image and the bounding box. 
+        # crop the image and the bounding box.
         img, proposals, gt_bboxs = self.RandomCropWithBbox(img, proposals, gt_bboxs)
-        
+
         gt_x = (gt_bboxs[:,2]-gt_bboxs[:,0]+1)
         gt_y = (gt_bboxs[:,3]-gt_bboxs[:,1]+1)
         gt_area_nonzero = (((gt_x != 1) & (gt_y != 1)))
@@ -276,10 +276,10 @@ class DataLoader(data.Dataset):
                 if is_det == False:
                     cap_seq[i,k,0] = self.wtoi[caption[j]]
                     cap_seq[i,k,4] = cap_seq[i,k,0]
-                    j += 1                
+                    j += 1
                 k += 1
 
-        # get the mask of the ground truth bounding box. The data shape is 
+        # get the mask of the ground truth bounding box. The data shape is
         # num_caption x num_box x num_seq
         box_mask = np.ones((len(captions), gt_bboxs.shape[0], self.seq_length))
         for i in range(len(captions)):
@@ -290,7 +290,7 @@ class DataLoader(data.Dataset):
         # get the batch version of the seq and box_mask.
         if ncap < self.seq_per_img:
             seq_batch = np.zeros([self.seq_per_img, self.seq_length, 4])
-            mask_batch = np.zeros([self.seq_per_img, gt_bboxs.shape[0], self.seq_length])            
+            mask_batch = np.zeros([self.seq_per_img, gt_bboxs.shape[0], self.seq_length])
             # we need to subsample (with replacement)
             for q in range(self.seq_per_img):
                 ixl = random.randint(0,ncap)
@@ -306,7 +306,7 @@ class DataLoader(data.Dataset):
 
         gt_seq = np.zeros([10, self.seq_length])
         gt_seq[:ncap,:] = cap_seq[:,:,4]
-        
+
         # if self.split == 'train':
             # augment the proposal with the gt bounding box.
             # this is just to make sure there exist proposals which labels to 1.
@@ -325,7 +325,7 @@ class DataLoader(data.Dataset):
         #         bbox = tuple(int(np.round(x)) for x in gt_bboxs[i, :4])
         #         cv2.rectangle(img_show, bbox[0:2], bbox[2:4], (0, 204, 0), 2)
         #         cv2.putText(img_show, '%s: %.3f' % (class_name, 1), (bbox[0], bbox[1] + 15), cv2.FONT_HERSHEY_PLAIN,
-        #                     1.0, (0, 0, 255), thickness=1)            
+        #                     1.0, (0, 0, 255), thickness=1)
         #     cv2.imwrite('gt_boxes.jpg', img_show)
 
         #     for i in range(proposals.shape[0]):
@@ -335,7 +335,7 @@ class DataLoader(data.Dataset):
         #         cv2.rectangle(img_show2, bbox[0:2], bbox[2:4], (0, 204, 0), 2)
 
         #         cv2.putText(img_show2, '%s: %.3f' % (class_name, score), (bbox[0], bbox[1] + 15), cv2.FONT_HERSHEY_PLAIN,
-        #                     1.0, (0, 0, 255), thickness=1)                    
+        #                     1.0, (0, 0, 255), thickness=1)
         #     cv2.imwrite('proposals.jpg', img_show2)
 
         #     pdb.set_trace()
@@ -370,7 +370,7 @@ class DataLoader(data.Dataset):
             img = img[:,:,::-1].copy() # RGB --> BGR
             img -= self.vgg_pixel_mean
             img = torch.from_numpy(img)
-            img = img.permute(2, 0, 1).contiguous()            
+            img = img.permute(2, 0, 1).contiguous()
         else:
             img = self.ToTensor(img)
             img = self.res_Normalize(img)

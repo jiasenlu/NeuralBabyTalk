@@ -9,6 +9,8 @@ import numpy as np
 import math
 import os
 
+from six.moves import xrange
+
 def precook(s, n=4, out=False):
     """
     Takes a string as input and returns an object that can be given to
@@ -64,10 +66,10 @@ class CiderScorer(object):
         self.ctest = []
         self.df_mode = df_mode
         if self.df_mode != "corpus":
-            self.document_frequency = pickle.load(open(os.path.join('data', df_mode + '.p'),'r'))       
+            self.document_frequency = pickle.load(open(os.path.join('data', df_mode + '.p'),'r'))
         self.cook_append(test, refs)
         self.ref_len = None
-    
+
     def clear(self):
         self.crefs = []
         self.ctest = []

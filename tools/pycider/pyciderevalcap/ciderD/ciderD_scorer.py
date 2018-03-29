@@ -3,14 +3,16 @@
 # Ramakrishna Vedantam <vrama91@vt.edu>
 
 import copy
-from collections import defaultdict
-import numpy as np
-import pdb
 import math
-import pickle
 import os
-import pdb
+import pickle
+from collections import defaultdict
+
+import numpy as np
+from six.moves import xrange
+
 import torch.nn as nn
+
 
 def precook(s, n=4, out=False):
     """
@@ -65,7 +67,7 @@ class CiderScorer(nn.Module):
             self.ref_len = pkl_file['ref_len']
             self.document_frequency = pkl_file['document_frequency']
         self.cook_append(test, refs)
-    
+
     def clear(self):
         self.crefs = []
         self.ctest = []

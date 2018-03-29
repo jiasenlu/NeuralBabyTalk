@@ -1,26 +1,17 @@
 # import _init_paths
-from random import shuffle, seed
-import sys
-import os.path
-import argparse
-import numpy as np
-import scipy.io
+import copy
 import json
-import re
-import math
-import numpy as np
-import skimage.io as io
-import pylab
-import copy
-import pdb
-import cPickle as pickle
-import copy
-from random import shuffle, seed
-from pycocotools.coco import COCO
 import operator
+from random import seed, shuffle
+
+import numpy as np
+from six.moves import xrange
+
+from pycocotools.coco import COCO
+
 
 def get_det_word(bbox_ann, captions, wtoi, wtod, dtoi, wtol, ngram=2):
-    
+
     # get the present category.
     pcats = [box['label'] for box in bbox_ann]
 
@@ -61,10 +52,10 @@ def get_stats(imgs, wtoi, wtod, dtoi, wtol, ctol, coco_det_train, coco_det_val):
     coco_stats = []
 
     for idx, img in enumerate(imgs):
-        
+
         image_id = info['images'][idx]['id']
         file_path = info['images'][idx]['file_path'].split('/')[0]
-    
+
         if file_path == 'train2014':
             coco = coco_det_train
         else:
@@ -77,7 +68,7 @@ def get_stats(imgs, wtoi, wtod, dtoi, wtol, ctol, coco_det_train, coco_det_val):
         det_indicator = get_det_word(bbox_ann, captions, wtoi, wtod, dtoi, wtol)
 
         present_clss = []
-        
+
         for i, caption in enumerate(captions):
             for j in range(len(caption)):
                 for n in range(2, 0, -1):
@@ -156,7 +147,7 @@ for pair in pair_list:
             drop_flag = True
             print("drop pair " + str(pair[0]) + '_' + str(pair[1]))
             break
-    
+
     if drop_flag == False:
         test_pair.append(pair)
         testing_total = copy.deepcopy(testing_total_copy)
@@ -198,7 +189,7 @@ for img in coco_stats:
 seed(123) # make reproducible
 shuffle(test_img_id) # shuffle the order
 
-num_val = int(0.3 * len(test_img_id)) 
+num_val = int(0.3 * len(test_img_id))
 
 train_id = train_img_id
 val_id = test_img_id[:num_val]
@@ -207,4 +198,3 @@ test_id = test_img_id[num_val:]
 print("train, val, test", len(train_id), len(val_id), len(test_id))
 robust_split = {'train_id':train_id, 'val_id':val_id, 'test_id':test_id}
 json.dump(robust_split, open('split_robust_coco.json', 'w'))
-
