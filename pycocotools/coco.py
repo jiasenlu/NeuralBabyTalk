@@ -44,19 +44,21 @@ __version__ = '1.0.1'
 # Code written by Piotr Dollar and Tsung-Yi Lin, 2014.
 # Licensed under the Simplified BSD License [see bsd.txt]
 
-import json
-import datetime
-import time
-# import matplotlib.pyplot as plt
-# from matplotlib.collections import PatchCollection
-# from matplotlib.patches import Polygon
-import numpy as np
-# from skimage.draw import polygon
-import urllib
 import copy
 import itertools
-import mask
+import json
 import os
+import time
+import urllib
+
+import numpy as np
+
+import mask
+import matplotlib.pyplot as plt
+# from matplotlib.collections import PatchCollection
+from matplotlib.patches import Polygon
+# from skimage.draw import polygon
+
 
 class COCO:
     def __init__(self, annotation_file=None):
@@ -73,17 +75,17 @@ class COCO:
         self.catToImgs = {}
         self.imgs = {}
         self.cats = {}
-        if not annotation_file == None:
-            print 'loading annotations into memory...'
+        if annotation_file is not None:
+            print('loading annotations into memory...')
             tic = time.time()
             dataset = json.load(open(annotation_file, 'r'))
-            print 'Done (t=%0.2fs)'%(time.time()- tic)
+            print('Done (t=%0.2fs)'%(time.time()- tic))
             self.dataset = dataset
             self.createIndex()
 
     def createIndex(self):
         # create index
-        print 'creating index...'
+        print('creating index...')
         anns = {}
         imgToAnns = {}
         catToImgs = {}
@@ -110,7 +112,7 @@ class COCO:
                 for ann in self.dataset['annotations']:
                     catToImgs[ann['category_id']] += [ann['image_id']]
 
-        print 'index created!'
+        print('index created!')
 
         # create class members
         self.anns = anns
@@ -125,7 +127,7 @@ class COCO:
         :return:
         """
         for key, value in self.dataset['info'].items():
-            print '%s: %s'%(key, value)
+            print('%s: %s'%(key, value))
 
     def getAnnIds(self, imgIds=[], catIds=[], areaRng=[], iscrowd=None):
         """
@@ -276,7 +278,7 @@ class COCO:
             ax.add_collection(p)
         elif datasetType == 'captions':
             for ann in anns:
-                print ann['caption']
+                print(ann['caption'])
 
     def loadRes(self, resFile):
         """
@@ -289,7 +291,7 @@ class COCO:
         # res.dataset['info'] = copy.deepcopy(self.dataset['info'])
         # res.dataset['licenses'] = copy.deepcopy(self.dataset['licenses'])
 
-        print 'Loading and preparing results...     '
+        print('Loading and preparing results...     ')
         tic = time.time()
         anns    = json.load(open(resFile))
         assert type(anns) == list, 'results in not an array of objects'
@@ -320,7 +322,7 @@ class COCO:
                     ann['bbox'] = mask.toBbox([ann['segmentation']])[0]
                 ann['id'] = id+1
                 ann['iscrowd'] = 0
-        print 'DONE (t=%0.2fs)'%(time.time()- tic)
+        print('DONE (t=%0.2fs)'%(time.time()- tic))
 
         res.dataset['annotations'] = anns
         res.createIndex()
@@ -334,7 +336,7 @@ class COCO:
         :return:
         '''
         if tarDir is None:
-            print 'Please specify target directory'
+            print('Please specify target directory')
             return -1
         if len(imgIds) == 0:
             imgs = self.imgs.values()
@@ -348,4 +350,4 @@ class COCO:
             fname = os.path.join(tarDir, img['file_name'])
             if not os.path.exists(fname):
                 urllib.urlretrieve(img['coco_url'], fname)
-            print 'downloaded %d/%d images (t=%.1fs)'%(i, N, time.time()- tic)
+            print('downloaded %d/%d images (t=%.1fs)'%(i, N, time.time()- tic))

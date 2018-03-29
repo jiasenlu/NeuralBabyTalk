@@ -170,7 +170,7 @@ def eval(opt):
             lang_stats = utils.noc_eval(predictions, str(1), opt.val_split, opt)
         else:
             lang_stats = utils.language_eval(opt.dataset, predictions, str(1), opt.val_split, opt)
-    
+
 
     print('Saving the predictions')
     if opt.inference_only:
@@ -200,7 +200,7 @@ if __name__ == '__main__':
         utils.update_values(options_yaml, vars(opt))
     print(opt)
     cudnn.benchmark = True
-    
+
     if opt.dataset == 'flickr30k':
         from misc.dataloader_flickr30k import DataLoader
     else:
@@ -320,7 +320,7 @@ if __name__ == '__main__':
                 params += [{'params':[value], 'lr':opt.cnn_learning_rate,
                         'weight_decay':opt.cnn_weight_decay, 'betas':(opt.cnn_optim_alpha, opt.cnn_optim_beta)}]
             else:
-                params += [{'params':[value], 'lr':opt.learning_rate, 
+                params += [{'params':[value], 'lr':opt.learning_rate,
                     'weight_decay':opt.weight_decay, 'betas':(opt.optim_alpha, opt.optim_beta)}]
 
     print("Use %s as optmization method" %(opt.optim))

@@ -13,13 +13,13 @@ Output: a json file and an hdf5 file
 The hdf5 file contains several fields:
 /images is (N,3,256,256) uint8 array of raw image data in RGB format
 /labels is (M,max_length) uint32 array of encoded labels, zero padded
-/label_start_ix and /label_end_ix are (N,) uint32 arrays of pointers to the 
+/label_start_ix and /label_end_ix are (N,) uint32 arrays of pointers to the
   first and last indices (in range 1..M) of labels for each image
 /label_length stores the length of the sequence for each of the M sequences
 
 The json file has a dict that contains:
 - an 'ix_to_word' field storing the vocab in form {ix:'word'}, where ix is 1-indexed
-- an 'images' field that is a list holding auxiliary information for each image, 
+- an 'images' field that is a list holding auxiliary information for each image,
   such as in particular the 'split' it was assigned to.
 """
 import sys
@@ -28,7 +28,7 @@ sys.path.append(os.getcwd())
 
 import json
 import argparse
-from six.moves import cPickle
+from six.moves import cPickle, xrange
 from collections import defaultdict
 from pycocotools.coco import COCO
 import numpy as np
@@ -97,12 +97,12 @@ def build_dict(imgs, info, wtoi, wtod, dtoi, wtol, ctol, coco_det_train, coco_de
     image_id = info['images'][idx]['id']
     # image_id = img['cocoid']
     file_path = info['images'][idx]['file_path'].split('/')[0]
-    
+
     if file_path == 'train2014':
       coco = coco_det_train
     else:
       coco = coco_det_val
-      
+
     bbox_ann_ids = coco.getAnnIds(imgIds=image_id)
     bbox_ann = [{'label': ctol[i['category_id']], 'bbox': i['bbox']} for i in coco.loadAnns(bbox_ann_ids)]
 
@@ -117,7 +117,7 @@ def build_dict(imgs, info, wtoi, wtod, dtoi, wtol, ctol, coco_det_train, coco_de
       for sent in img:
         captions.append(sent + ['<eos>'])
       det_indicator = get_det_word(bbox_ann, captions, wtoi, wtod, dtoi, wtol)
-      
+
       ncap = len(captions) # number of captions available for this image
       for i, caption in enumerate(captions):
           tmp_tokens = []
@@ -133,7 +133,7 @@ def build_dict(imgs, info, wtoi, wtod, dtoi, wtol, ctol, coco_det_train, coco_de
                       break
               if is_det == False:
                   tmp_tokens.append(wtoi[caption[j]])
-                  j += 1                
+                  j += 1
               k += 1
           ref_idxs.append(' '.join([str(int(_)) for _ in tmp_tokens]))
       # refs_words.append(ref_words)
@@ -148,7 +148,7 @@ def build_dict(imgs, info, wtoi, wtod, dtoi, wtol, ctol, coco_det_train, coco_de
 
 
 def get_det_word(bbox_ann, captions, wtoi, wtod, dtoi, wtol, ngram=2):
-    
+
     # get the present category.
     pcats = [box['label'] for box in bbox_ann]
 
