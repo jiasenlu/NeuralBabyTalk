@@ -55,7 +55,7 @@ import numpy as np
 
 import mask
 import matplotlib.pyplot as plt
-# from matplotlib.collections import PatchCollection
+from matplotlib.collections import PatchCollection
 from matplotlib.patches import Polygon
 # from skimage.draw import polygon
 
