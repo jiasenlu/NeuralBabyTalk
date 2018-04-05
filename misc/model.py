@@ -12,9 +12,7 @@ from misc.vgg16 import vgg16
 from misc.CaptionModel import CaptionModel
 from misc.rewards import get_self_critical_reward
 from pooling.roi_align.modules.roi_align import RoIAlignAvg
-from pooling.roi_crop.modules.roi_crop import _RoICrop
 # from roi_crop.modules.gridgen import _AffineGridGen
-from misc.utils import _affine_grid_gen
 from torch.autograd import Variable
 import math
 
