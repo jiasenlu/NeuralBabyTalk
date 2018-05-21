@@ -108,7 +108,7 @@ def train(epoch, opt):
         # Write the training loss summary
         if (iteration % opt.losses_log_every == 0):
             if tf is not None:
-                add_summary_value(tf_summary_writer, 'train_loss', train_loss, iteration)
+                add_summary_value(tf_summary_writer, 'train_loss', loss, iteration)
                 add_summary_value(tf_summary_writer, 'learning_rate', opt.learning_rate, iteration)
                 # add_summary_value(tf_summary_writer, 'scheduled_sampling_prob', model.ss_prob, iteration)
                 if opt.self_critical:
