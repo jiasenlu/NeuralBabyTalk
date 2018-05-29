@@ -71,7 +71,7 @@ def train(epoch, opt):
 
         else:
             lm_loss, bn_loss, fg_loss = model(input_imgs, input_seqs, gt_seqs, input_num, input_ppls, gt_bboxs, mask_bboxs, 'MLE')
-            loss += 0.1 * (lm_loss.sum() + bn_loss.sum() + fg_loss.sum()) / lm_loss.numel()
+            loss += (lm_loss.sum() + bn_loss.sum() + fg_loss.sum()) / lm_loss.numel()
 
             lm_loss_temp += lm_loss.sum().data[0] / lm_loss.numel()
             bn_loss_temp += bn_loss.sum().data[0] / lm_loss.numel()
