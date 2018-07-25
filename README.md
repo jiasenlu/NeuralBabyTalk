@@ -121,10 +121,10 @@ This codebase also support self-critic training and fine-tuning CNN. You are wel
 If you use this code as part of any published research, please acknowledge the following paper
 
 ```
-@misc{Lu2018Neural,
+@inproceedings{Lu2018Neural,
 author = {Lu, Jiasen and Yang, Jianwei and Batra, Dhruv and Parikh, Devi},
 title = {Neural Baby Talk},
-journal = {CVPR},
+booktitle = {CVPR},
 year = {2018}
 }
 ```
