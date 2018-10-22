@@ -228,7 +228,7 @@ class LMCriterion(nn.Module):
             txt_mask = Variable(txt_mask)
         txt_out = - torch.masked_select(txt_select, txt_mask.view(-1,1))
 
-        loss = (torch.sum(txt_out)+torch.sum(vis_out)) / (torch.sum(txt_mask.data) + torch.sum(vis_mask.data))
+        loss = (torch.sum(txt_out)+torch.sum(vis_out)).float() / (torch.sum(txt_mask.data) + torch.sum(vis_mask.data)).float()
 
         return loss
 
@@ -249,7 +249,7 @@ class BNCriterion(nn.Module):
             select = torch.gather(input.view(-1,2), 1, Variable(new_target))
 
             out = - torch.masked_select(select, bn_mask)
-            loss = torch.sum(out) / torch.sum(bn_mask.data)
+            loss = torch.sum(out).float() / torch.sum(bn_mask.data).float()
         else:
             loss = Variable(input.data.new(1).zero_()).float()
 
@@ -272,7 +272,7 @@ class FGCriterion(nn.Module):
 
         if torch.sum(attr_mask.data) > 0:
             out = - torch.masked_select(select, attr_mask)
-            loss = torch.sum(out) / torch.sum(attr_mask.data)
+            loss = torch.sum(out).float() / torch.sum(attr_mask.data).float()
         else:
             loss = Variable(input.data.new(1).zero_()).float()
 
