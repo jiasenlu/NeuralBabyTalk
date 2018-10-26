@@ -43,7 +43,9 @@ import pdb
 from stanfordcorenlp import StanfordCoreNLP
 from nltk.tokenize import word_tokenize
 
-nlp = StanfordCoreNLP('tools/stanford-corenlp-full-2017-06-09', memory='8g')
+nlp = StanfordCoreNLP(
+  os.path.join(os.path.dirname(os.path.realpath(__file__)),
+      'stanford-corenlp-full-2017-06-09'), memory='8g')
 props={'annotators': 'ssplit, tokenize, lemma','pipelineLanguage':'en', 'outputFormat':'json'}
 
 def build_vocab(imgs, params):
@@ -127,7 +129,7 @@ def main(params):
 
   wtol = {}
   for w in vocab:
-      out = json.loads(nlp.annotate(w.encode('utf-8'), properties=props))
+      out = json.loads(nlp.annotate(w, properties=props))
       lemma_w = out['sentences'][0]['tokens'][0]['lemma']
       wtol[w] = lemma_w
 

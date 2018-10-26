@@ -151,7 +151,7 @@ def eval(opt):
         sents = utils.decode_sequence(dataset.itow, dataset.itod, dataset.ltow, dataset.itoc, dataset.wtod, \
                                     seq.data, bn_seq.data, fg_seq.data, opt.vocab_size, opt)
         for k, sent in enumerate(sents):
-            entry = {'image_id': img_id[k], 'caption': sent}
+            entry = {'image_id': img_id[k].item(), 'caption': sent}
             predictions.append(entry)
             if num_show < 20:
                 print('image %s: %s' %(entry['image_id'], entry['caption']))

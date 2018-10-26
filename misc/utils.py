@@ -59,9 +59,9 @@ def decode_sequence(itow, itod, ltow, itoc, wtod, seq, bn_seq, fg_seq, vocab_siz
         for j in range(D):
             if j >= 1:
                 txt = txt + ' '
-            ix = seq[i,j]
+            ix = seq[i,j].item()
             if ix > vocab_size:
-                det_word = itod[fg_seq[i,j]]
+                det_word = itod[fg_seq[i,j].item()]
                 det_class = itoc[wtod[det_word]]
                 if opt.decode_noc and det_class in noc_object:
                     det_word = det_class
@@ -90,9 +90,9 @@ def decode_sequence_det(itow, itod, ltow, itoc, wtod, seq, bn_seq, fg_seq, vocab
         for j in range(D):
             if j >= 1:
                 txt = txt + ' '
-            ix = seq[i,j]
+            ix = seq[i,j].item()
             if ix > vocab_size:
-                det_word = itod[fg_seq[i,j]]
+                det_word = itod[fg_seq[i,j].item()]
                 det_class = itoc[wtod[det_word]]
                 if opt.decode_noc and det_class in noc_object:
                     det_word = det_class
@@ -121,7 +121,7 @@ def decode_normal(ix_to_word, seq):
     for i in range(N):
         txt = ''
         for j in range(D):
-            ix = seq[i,j]
+            ix = seq[i,j].item()
             if ix > 0 :
                 if j >= 1:
                     txt = txt + ' '
@@ -139,9 +139,9 @@ def decode_sequence_bbox(itow, itod, ltow, seq, bn_seq, fg_seq, vocab_size, opt)
         for j in range(D):
             if j >= 1:
                 txt = txt + ' '
-            ix = seq[i,j]
+            ix = seq[i,j].item()
             if ix > vocab_size:
-                det_word = itod[fg_seq[i,j]]
+                det_word = itod[fg_seq[i,j].item()]
                 if (bn_seq[i,j] == 1) and det_word in ltow:
                     word = ltow[det_word]
                 else:
