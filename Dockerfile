@@ -1,15 +1,6 @@
 FROM pytorch/pytorch:0.4-cuda9-cudnn7-devel
 
 # ----------------------------------------------------------------------------
-# -- copy repository and build roi_align shared object
-# ----------------------------------------------------------------------------
-
-COPY . /workspace/neuralbabytalk
-# RUN cd /workspace/neuralbabytalk/pooling && \
-#    sh make.sh
-
-
-# ----------------------------------------------------------------------------
 # -- install apt and pip dependencies
 # ----------------------------------------------------------------------------
 
@@ -36,6 +27,16 @@ RUN pip install Cython && pip install h5py \
     stanfordcorenlp \
     torchtext \
     tqdm && python -c "import nltk; nltk.download('punkt')"
+
+# ----------------------------------------------------------------------------
+# -- copy repository and build roi_align shared object
+# ----------------------------------------------------------------------------
+
+COPY . /workspace/neuralbabytalk
+RUN git clone https://github.com/jwyang/faster-rcnn.pytorch /workspace/faster-rcnn.pytorch && \
+    cd /workspace/faster-rcnn.pytorch/lib && sh make.sh && \
+    cp /workspace/faster-rcnn.pytorch/lib/model/roi_align/_ext/roi_align/_roi_align.so \
+       /workspace/neuralbabytalk/pooling/roi_align/_ext/roi_align
 
 
 # ----------------------------------------------------------------------------
