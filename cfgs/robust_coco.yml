@@ -2,7 +2,7 @@
 dataset: coco
 input_json: 'data/robust_coco/cap_coco.json'
 input_dic: 'data/robust_coco/dic_coco.json'
-image_path: '/home/jiasen/data/coco/images'
+image_path: 'data/coco/images'
 proposal_h5: 'data/coco/coco_detection.h5'
 data_path: 'data'
 # language model

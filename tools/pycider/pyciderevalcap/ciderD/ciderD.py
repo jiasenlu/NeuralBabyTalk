@@ -7,7 +7,7 @@
 #
 # Authors: Ramakrishna Vedantam <vrama91@vt.edu> and Tsung-Yi Lin <tl483@cornell.edu>
 
-from ciderD_scorer import CiderScorer
+from .ciderD_scorer import CiderScorer
 import torch.nn as nn
 import pdb
 
