@@ -1,5 +1,7 @@
 FROM pytorch/pytorch:0.4-cuda9-cudnn7-devel
 
+COPY . /workspace/neuralbabytalk
+
 # ----------------------------------------------------------------------------
 # -- install apt and pip dependencies
 # ----------------------------------------------------------------------------
@@ -27,16 +29,6 @@ RUN pip install Cython && pip install h5py \
     stanfordcorenlp \
     torchtext \
     tqdm && python -c "import nltk; nltk.download('punkt')"
-
-# ----------------------------------------------------------------------------
-# -- copy repository and build roi_align shared object
-# ----------------------------------------------------------------------------
-
-COPY . /workspace/neuralbabytalk
-RUN git clone https://github.com/jwyang/faster-rcnn.pytorch /workspace/faster-rcnn.pytorch && \
-    cd /workspace/faster-rcnn.pytorch/lib && sh make.sh && \
-    cp /workspace/faster-rcnn.pytorch/lib/model/roi_align/_ext/roi_align/_roi_align.so \
-       /workspace/neuralbabytalk/pooling/roi_align/_ext/roi_align
 
 
 # ----------------------------------------------------------------------------
@@ -85,5 +77,16 @@ RUN python prepro/prepro_dic_coco.py \
     --input_json data/coco/dataset_coco.json \
     --split normal \
     --output_dic_json data/coco/dic_coco.json \
-    --output_cap_json data/coco/cap_coco.json
+    --output_cap_json data/coco/cap_coco.json && \
+    python prepro/prepro_dic_coco.py \
+    --input_json data/coco/dataset_coco.json \
+    --split robust \
+    --output_dic_json data/robust_coco/dic_coco.json \
+    --output_cap_json data/robust_coco/cap_coco.json && \
+    python prepro/prepro_dic_coco.py \
+    --input_json data/coco/dataset_coco.json \
+    --split noc \
+    --output_dic_json data/noc_coco/dic_coco.json \
+    --output_cap_json data/noc_coco/cap_coco.json
+
 EXPOSE 8888
