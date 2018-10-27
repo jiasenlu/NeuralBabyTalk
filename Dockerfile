@@ -27,6 +27,7 @@ RUN pip install Cython && pip install h5py \
     pycocotools \
     scikit-image \
     stanfordcorenlp \
+    tensorflow \
     torchtext \
     tqdm && python -c "import nltk; nltk.download('punkt')"
 
@@ -56,6 +57,8 @@ RUN cd /workspace/neuralbabytalk/prepro && \
     unzip stanford-corenlp-full-2017-06-09.zip && \
     rm stanford-corenlp-full-2017-06-09.zip
 
+RUN cd /workspace/neuralbabytalk/tools/coco-caption && \
+    sh get_stanford_models.sh
 
 # ----------------------------------------------------------------------------
 # -- download preprocessed COCO detection output HDF file and pretrained model

@@ -21,12 +21,13 @@ These directories will be attached as "volumes" to our docker container for Neur
 nvidia-docker run --name nbt_container -it \
      -v $COCO_IMAGES:/workspace/neuralbabytalk/data/coco/images \
      -v $COCO_ANNOTATIONS:/workspace/neuralbabytalk/data/coco/annotations \
-     --shm-size 8G nbt /bin/bash
+     --shm-size 8G -p 8888:8888 nbt /bin/bash
 ```
 
 Ideally, shared memory size (`--shm-size`) of 8GB would be enough. Tune it according to your requirements / machine specifications.
 
 **Saved Checkpoints:** All checkpoints will be saved in `/workspace/neuralbabytalk/save`. From outside the container, execute this to get your checkpoints from this container into the main filesystem:
+The container would expose port 8888, which can be used to host tensorboard visualizations.
 
 ```shell
 docker container cp nbt_container:workspace/neuralbabytalk/save /path/to/local/filesystem/save
