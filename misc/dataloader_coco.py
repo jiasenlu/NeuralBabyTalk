@@ -18,6 +18,8 @@ import torchvision.transforms as transforms
 from PIL import Image
 from pycocotools.coco import COCO
 
+from .dataloader_hdf import HDFSingleDataset
+
 
 class DataLoader(data.Dataset):
     def __init__(self, opt, split='train', seq_per_img=5):
@@ -106,13 +108,7 @@ class DataLoader(data.Dataset):
         self.caption_file = json.load(open(self.opt.input_json))
 
         # open the detection json file.
-        print('DataLoader loading proposal file: ', opt.proposal_h5)
-        h5_proposal_file = h5py.File(self.opt.proposal_h5, 'r', driver='core')
-        self.num_proposals = h5_proposal_file['dets_num'][:]
-        self.label_proposals = h5_proposal_file['dets_labels'][:]
-        self.label_proposals = h5_proposal_file['dets_labels'][:]
-        self.num_nms = h5_proposal_file['nms_num'][:]
-        h5_proposal_file.close()
+        self.dataloader_hdf = HDFSingleDataset(self.opt.proposal_h5)
 
         # load the coco grounding truth bounding box.
         det_train_path = '%s/coco/annotations/instances_train2014.json' %(opt.data_path)
@@ -190,19 +186,17 @@ class DataLoader(data.Dataset):
         return ngram_indicator
 
     def __getitem__(self, index):
-
         ix = self.split_ix[index]
 
         # load image here.
         image_id = self.info['images'][ix]['id']
         file_path = self.info['images'][ix]['file_path']
 
-        # load the proposal file
-        # proposal_file = self.proposal_file[image_id]
-        num_proposal = int(self.num_proposals[ix])
-        num_nms = int(self.num_nms[ix])
-        proposals = self.label_proposals[ix]
-        proposals = proposals[:num_nms,:]
+        proposal_item = self.dataloader_hdf[ix]
+        num_proposal = int(proposal_item['dets_num'])
+        num_nms = int(proposal_item['nms_num'])
+        proposals = proposal_item['dets_labels']
+        proposals = proposals.squeeze()[:num_nms, :]
 
         coco_split = file_path.split('/')[0]
         # get the ground truth bounding box.
