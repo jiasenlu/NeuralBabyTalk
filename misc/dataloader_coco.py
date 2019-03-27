@@ -17,6 +17,7 @@ import torchtext.vocab as vocab  # use this to load glove vector
 import torchvision.transforms as transforms
 from PIL import Image
 from pycocotools.coco import COCO
+import copy
 
 from .dataloader_hdf import HDFSingleDataset
 
@@ -192,7 +193,7 @@ class DataLoader(data.Dataset):
         image_id = self.info['images'][ix]['id']
         file_path = self.info['images'][ix]['file_path']
 
-        proposal_item = self.dataloader_hdf[ix]
+        proposal_item =copy.deepcopy(self.dataloader_hdf[ix])
         num_proposal = int(proposal_item['dets_num'])
         num_nms = int(proposal_item['nms_num'])
         proposals = proposal_item['dets_labels']
