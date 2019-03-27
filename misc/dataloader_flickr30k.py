@@ -165,9 +165,9 @@ class DataLoader(data.Dataset):
         # proposal_file = self.proposal_file[image_id]
         num_proposal = int(self.num_proposals[ix])
         num_nms = int(self.num_nms[ix])
-        proposals = self.label_proposals[ix]
+        proposals = copy.deepcopy(self.label_proposals[ix])
         proposals = proposals[:num_nms,:]
-        captions = self.caption_file[ix]
+        captions = copy.deepcopy(self.caption_file[ix])
 
         bbox_ann = []
         bbox_idx = 0
